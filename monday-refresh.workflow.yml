@@ -1,0 +1,43 @@
+# Weekly index refresh for app-horde.
+#
+# INSTALL (one-time, by hand): the automation token used for pushes can't write
+# .github/workflows/*, so this file lives at the repo root. To activate:
+#   1. On github.com, create .github/workflows/refresh.yml in crtGhoul/app-horde
+#   2. Paste this entire file into it and commit.
+# Until then, the Monday countdown on the site is aspirational.
+
+name: Monday refresh
+
+on:
+  schedule:
+    # 09:00 UTC every Monday (~3am CT / ~4am ET)
+    - cron: '0 9 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Rebuild index
+        run: python3 build.py
+
+      - name: Commit index.html if it changed
+        run: |
+          git config user.name "app-horde refresh bot"
+          git config user.email "app-horde-refresh@users.noreply.github.com"
+          if git diff --quiet index.html; then
+            echo "no changes — nothing to commit"
+          else
+            git add index.html
+            git commit -m "weekly index refresh ($(date -u +%F))"
+            git push
+          fi

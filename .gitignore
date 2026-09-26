@@ -1,0 +1,7 @@
+# Downloaded source snapshots — regenerable build inputs (~35MB), re-fetched
+# every run and every Monday by CI. Not committed.
+sources/*.json
+
+# Local test builds
+/tmp/
+*.tmp.html

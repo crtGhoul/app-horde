@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APP_HORDE — iOS Sideloading App Index</title>
+<meta name="description" content="{{META_DESC}}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="APP_HORDE — iOS Sideloading App Index">
+<meta property="og:description" content="{{OG_DESC}}">
+<meta property="og:url" content="https://crtghoul.github.io/app-horde/">
+<meta property="og:image" content="https://crtghoul.github.io/app-horde/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="APP_HORDE — iOS Sideloading App Index">
+<meta name="twitter:description" content="{{TW_DESC}}">
+<meta name="twitter:image" content="https://crtghoul.github.io/app-horde/og.jpg">
+<style>/* ================= APP_HORDE theme ================= */
+:root{
+  --bg:#060806; --panel:#0a0d09; --card:#0b0e0a;
+  --text:#b9e8bd; --muted:#5f7a62;
+  --toxic:#39ff14; --blood:#ff1a3c; --amber:#ffb000; --cyan:#00e5ff;
+  --border:#14301a; --dim:#0e150d;
+}
+*{box-sizing:border-box}
+html{scrollbar-color:var(--border) var(--bg)}
+body{
+  margin:0; background:var(--bg); color:var(--text); overflow-x:hidden;
+  font-family:ui-monospace,'Cascadia Code','JetBrains Mono','SF Mono',Menlo,Consolas,monospace;
+  background-image:
+    linear-gradient(rgba(57,255,20,.028) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(57,255,20,.028) 1px,transparent 1px);
+  background-size:34px 34px;
+}
+/* CRT scanlines + vignette */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:200;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.22) 2px 4px)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:199;
+  background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.55) 100%)}
+#rain{position:fixed;inset:0;z-index:0;opacity:.5;pointer-events:none}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:#050705}
+::-webkit-scrollbar-thumb{background:#14301a;border:2px solid #050705}
+::-webkit-scrollbar-thumb:hover{background:var(--toxic)}
+::selection{background:var(--blood);color:#fff}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px;position:relative;z-index:2}
+
+/* ================= boot ================= */
+#boot{position:fixed;inset:0;background:#020402;z-index:1000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:opacity .45s}
+#boot.done{opacity:0;pointer-events:none}
+#bootterm{width:min(640px,92vw)}
+#bootlog{color:var(--toxic);font-size:14px;line-height:1.9;margin:0;white-space:pre-wrap;
+  text-shadow:0 0 8px rgba(57,255,20,.6);min-height:220px}
+#boot .bar{width:min(640px,92vw);height:6px;background:#0a140b;border:1px solid var(--border);margin-top:12px}
+#bootbar{height:100%;width:0;background:var(--toxic);box-shadow:0 0 10px var(--toxic)}
+#bootskip{position:absolute;bottom:26px;background:none;border:1px solid var(--border);
+  color:var(--muted);font-size:12px;letter-spacing:2px;padding:8px 18px;cursor:pointer;font-family:inherit}
+#bootskip:hover{color:var(--toxic);border-color:var(--toxic)}
+
+/* ================= tabs ================= */
+.tabs{position:sticky;top:0;z-index:100;background:rgba(4,6,4,.95);border-bottom:1px solid var(--border)}
+.tabs .wrap{display:flex;gap:6px;overflow-x:auto;padding:10px 16px;align-items:center}
+.tab{white-space:nowrap;padding:8px 11px;color:var(--muted);font-size:12.5px;background:none;
+  border:1px solid transparent;cursor:pointer;font-family:inherit;letter-spacing:.5px}
+.tab:hover{color:var(--toxic);border-color:var(--border)}
+.tab.active{background:var(--toxic);color:#000;border-color:var(--toxic);font-weight:700;
+  box-shadow:0 0 14px rgba(57,255,20,.55)}
+.tab.active::before{content:"> "}
+.brand{font-weight:700;margin-right:10px;font-size:13.5px;color:var(--toxic);white-space:nowrap;
+  text-shadow:0 0 10px rgba(57,255,20,.5)}
+.cursor{display:inline-block;width:9px;height:15px;background:var(--toxic);vertical-align:-2px;
+  margin-left:7px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ================= hero ================= */
+header.hero{padding:44px 0 10px}
+.glitch{position:relative;display:inline-block;margin:0 0 10px;
+  font-size:clamp(34px,7vw,58px);font-weight:800;letter-spacing:3px;color:var(--toxic);
+  text-shadow:0 0 26px rgba(57,255,20,.45)}
+.glitch::before,.glitch::after{content:attr(data-t);position:absolute;inset:0;
+  overflow:hidden;pointer-events:none}
+.glitch::before{color:var(--blood);opacity:0;animation:gl1 3.4s infinite}
+.glitch::after{color:var(--cyan);opacity:0;animation:gl2 2.7s infinite}
+@keyframes gl1{0%,91%{opacity:0;transform:none}
+  92%{opacity:.85;transform:translate(-5px,2px);clip-path:inset(10% 0 55% 0)}
+  95%{opacity:.85;transform:translate(4px,-2px);clip-path:inset(60% 0 8% 0)}97%,100%{opacity:0;transform:none}}
+@keyframes gl2{0%,88%{opacity:0;transform:none}
+  89%{opacity:.8;transform:translate(5px,-1px);clip-path:inset(40% 0 30% 0)}
+  93%{opacity:.8;transform:translate(-4px,2px);clip-path:inset(5% 0 70% 0)}96%,100%{opacity:0;transform:none}}
+header.hero p{color:var(--muted);margin:0;max-width:680px;line-height:1.7;font-size:14px}
+header.hero p::before{content:"> ";color:var(--toxic)}
+.stats{display:flex;gap:12px;margin:26px 0;flex-wrap:wrap}
+.stat{background:var(--dim);border:1px solid var(--border);padding:14px 20px;
+  min-width:150px;position:relative;overflow:hidden}
+.stat::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--toxic);opacity:.6}
+.stat b{font-size:26px;display:block;color:var(--toxic);text-shadow:0 0 12px rgba(57,255,20,.4)}
+.stat span{color:var(--muted);font-size:11.5px;letter-spacing:1.5px}
+.quarantine{border:1px solid var(--blood);background:rgba(255,26,60,.06);
+  padding:14px 16px;margin:6px 0 8px;font-size:13px;line-height:1.6;color:#e8b9c0}
+.quarantine b{color:var(--blood);letter-spacing:2px}
+
+/* ================= sections & tiles ================= */
+h2.sec{margin:34px 0 6px;font-size:17px;color:var(--toxic);letter-spacing:2px}
+h2.sec::before{content:"// "}
+.secsub{color:var(--muted);font-size:12.5px;letter-spacing:1px;margin:0 0 4px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin:14px 0 10px}
+.tile{background:var(--dim);border:1px solid var(--border);padding:18px 16px;cursor:pointer;
+  transition:transform .15s,box-shadow .15s,border-color .15s;animation:rise .5s both}
+.tile:hover{border-color:var(--toxic);box-shadow:0 0 18px rgba(57,255,20,.28);transform:translateY(-3px)}
+.tile b{display:block;font-size:22px;color:var(--toxic);margin-bottom:6px}
+.tile span{color:var(--muted);font-size:12.5px;letter-spacing:1px}
+.tile span::before{content:"./";color:#3d5240}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* ================= toolbar ================= */
+.toolbar{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap;position:sticky;top:58px;
+  z-index:50;background:rgba(6,8,6,.95);padding:10px 0}
+.toolbar input,.toolbar select{background:#000;border:1px solid var(--border);color:var(--toxic);
+  padding:11px 14px;font-size:13.5px;font-family:inherit}
+.toolbar input{flex:1;min-width:200px}
+.toolbar input::placeholder{color:#33473a}
+.toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--toxic);
+  box-shadow:0 0 10px rgba(57,255,20,.35)}
+
+/* ================= cards ================= */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;padding-bottom:8px}
+.card{background:var(--card);border:1px solid var(--border);padding:16px 16px 16px 20px;
+  position:relative;cursor:pointer;opacity:0;transform:translateY(16px);
+  transition:opacity .45s,transform .45s,border-color .15s,box-shadow .15s}
+.card.vis{opacity:1;transform:none}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--toxic);opacity:.65}
+.card:hover{border-color:var(--toxic);box-shadow:0 0 16px rgba(57,255,20,.22)}
+.card:hover::before{background:var(--blood);box-shadow:0 0 10px var(--blood)}
+.badge{position:absolute;top:12px;right:12px;background:#160a0d;border:1px solid var(--blood);
+  color:var(--blood);font-size:10.5px;padding:3px 9px;white-space:nowrap;font-weight:700;letter-spacing:1px}
+.chd{display:flex;gap:12px;align-items:center;margin:0 70px 6px 0}
+.ic{width:46px;height:46px;object-fit:cover;background:#000;flex-shrink:0;border:1px solid var(--border)}
+.n{font-size:14.5px;color:#eaffea;letter-spacing:.3px}
+.d{color:var(--muted);font-size:12px;margin-bottom:8px}
+.pd{margin-bottom:6px}
+.tp{color:var(--amber);font-size:11.5px;margin-bottom:8px;letter-spacing:.5px}
+.tp::before{content:"☣ "}
+.desc{color:var(--muted);font-size:12.8px;line-height:1.55;margin:0}
+.pill{display:inline-block;background:#0d1a0e;border:1px solid var(--border);color:var(--toxic);
+  padding:3px 10px;font-size:11px;margin:2px 4px 2px 0;vertical-align:middle}
+.rate{color:var(--amber);border-color:var(--amber)}
+.src{display:inline-block;border:1px solid;padding:3px 8px;font-size:10px;
+  letter-spacing:1px;margin:2px 4px 2px 0}
+.s-alans{color:var(--toxic);border-color:var(--toxic)}
+.s-apt{color:var(--cyan);border-color:var(--cyan)}
+.s-fresh{color:#000;background:var(--toxic);border-color:var(--toxic);font-weight:700}
+.s-cypwn{color:#ff7b00;border-color:#ff7b00}
+.s-qnt{color:#b366ff;border-color:#b366ff}
+.s-qntp{color:#ff66cc;border-color:#ff66cc}
+.s-wuxu{color:#ffd166;border-color:#ffd166}
+.s-side{color:#7cfc00;border-color:#7cfc00}
+.s-alts{color:#8f9bff;border-color:#8f9bff}
+.s-oat{color:#2dd4bf;border-color:#2dd4bf}
+.s-utm{color:#4d7cff;border-color:#4d7cff}
+.s-ish{color:#b8c4b8;border-color:#b8c4b8}
+.s-fly{color:#ff5c39;border-color:#ff5c39}
+.s-official{color:#000;background:var(--amber);border-color:var(--amber);font-weight:700}
+.empty{color:var(--muted);text-align:center;padding:44px;letter-spacing:1px}
+
+/* ================= modal ================= */
+#modal{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;
+  padding:18px;background:rgba(2,4,2,.82);backdrop-filter:blur(3px)}
+#modal.open{display:flex}
+.mbox{background:#070a07;border:1px solid var(--toxic);max-width:600px;width:100%;
+  max-height:88vh;overflow-y:auto;padding:26px;position:relative;
+  box-shadow:0 0 40px rgba(57,255,20,.25);animation:mup .25s both}
+@keyframes mup{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.mbox h3{font-size:20px;margin:0 0 4px}
+.mbox .glitch{font-size:24px;letter-spacing:1px}
+.mx{position:absolute;top:12px;right:12px;background:none;border:1px solid var(--blood);
+  color:var(--blood);font-family:inherit;font-size:12px;padding:6px 10px;cursor:pointer;letter-spacing:1px}
+.mx:hover{background:var(--blood);color:#000}
+.msec{color:var(--muted);font-size:11px;letter-spacing:2px;margin-bottom:14px}
+.msec::before{content:"◈ "}
+.r{border-top:1px dashed var(--border);padding:10px 0;font-size:12.5px;line-height:1.7}
+.k{display:block;font-size:10.5px;letter-spacing:2px;color:var(--toxic);margin-bottom:6px}
+.v{color:var(--text)}
+.bid{margin-bottom:8px}
+.bid code{background:#000;border:1px solid var(--border);color:var(--cyan);
+  padding:3px 8px;font-size:11.5px;word-break:break-all}
+.cpy{background:none;border:1px solid var(--border);color:var(--muted);font-family:inherit;
+  font-size:10.5px;padding:3px 9px;margin-left:8px;cursor:pointer;letter-spacing:1px}
+.cpy:hover{color:var(--toxic);border-color:var(--toxic)}
+.warn{border:1px solid var(--blood);background:rgba(255,26,60,.06);color:#e8b9c0;
+  font-size:12px;line-height:1.6;padding:12px 14px;margin:16px 0 0}
+
+/* ================= footer ================= */
+footer{color:#3d5240;font-size:11.5px;padding:34px 0;text-align:center;
+  border-top:1px solid var(--border);margin-top:36px;letter-spacing:1px;
+  line-height:1.8;position:relative;z-index:2}
+footer .skull{color:var(--blood);font-size:15px}
+.invite{display:inline-block;border:1px dashed #4a7c43;background:#0b140b;padding:7px 12px;margin:8px 4px;border-radius:6px;color:#c9eac2;letter-spacing:.5px;line-height:1.7}
+.invite a{color:#b8ffb0;font-weight:bold;text-decoration:underline}
+.invite code{color:#eaffea;background:#162616;padding:1px 6px;border-radius:4px}
+@media(max-width:640px){.invite{font-size:11px;padding:6px 8px}}
+
+/* ================= field manual (guide) ================= */
+.gbox{border:1px solid var(--border);background:var(--panel);padding:18px 20px;
+  margin:0 0 8px;line-height:1.75;font-size:14px;position:relative;z-index:2}
+.gbox p{margin:0 0 12px}
+.gbox p:last-child{margin-bottom:0}
+.gbox .dim{color:var(--muted);font-size:12.5px}
+.paths{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));
+  gap:14px;margin-bottom:8px;position:relative;z-index:2}
+.path{border:1px solid var(--border);background:var(--card);padding:18px}
+.path:first-child{border-color:var(--toxic);box-shadow:0 0 18px rgba(57,255,20,.12)}
+.path h3{margin:6px 0 4px;font-size:16px;color:var(--toxic);letter-spacing:1px}
+.ptag{display:inline-block;font-size:11px;letter-spacing:2px;color:#04140a;
+  background:var(--toxic);padding:3px 10px;font-weight:700}
+.path:nth-child(2) .ptag{background:var(--cyan)}
+.path:nth-child(3) .ptag{background:var(--amber)}
+.pcost{color:var(--muted);font-size:12px;margin:0 0 10px !important}
+.path ol{margin:0;padding-left:20px;font-size:13px;line-height:1.8}
+.path ol li{margin-bottom:8px}
+.path b{color:var(--toxic)}
+.dllist{border:1px solid var(--border);margin-bottom:8px;position:relative;z-index:2}
+.dlrow{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:13px 16px;border-bottom:1px solid var(--dim)}
+.dlrow:last-child{border-bottom:none}
+.dlrow b{color:var(--toxic);font-size:14px}
+.dlrow span{display:block;color:var(--muted);font-size:12px;margin-top:3px;line-height:1.5}
+.gbtn{display:inline-block;border:1px solid var(--toxic);color:var(--toxic);
+  padding:9px 20px;text-decoration:none;font-weight:700;letter-spacing:2px;
+  font-size:12.5px;white-space:nowrap;background:rgba(57,255,20,.06)}
+.gbtn:hover{background:var(--toxic);color:#04140a}
+.gbtn.sm{padding:7px 14px;font-size:11.5px;margin:0 6px 6px 0}
+.steps{margin:0;padding-left:20px}
+.steps li{margin-bottom:10px}
+.gbox .bid code{word-break:break-all}
+.rules p{border-left:3px solid var(--blood);padding-left:12px;margin-bottom:14px !important}
+.rules b{color:var(--amber)}
+.gonewb{margin-top:14px;font-size:13.5px;color:var(--muted)}
+.gonewb a{color:var(--toxic);font-weight:700}
+
+/* ================= favorites + version picker + fixes ================= */
+.fstar{background:none;border:none;font:inherit;color:var(--muted);font-size:15px;
+  cursor:pointer;padding:0 2px 0 6px;line-height:1;vertical-align:baseline}
+.fstar:hover{color:var(--amber);text-shadow:0 0 8px var(--amber)}
+.fstar.on{color:var(--amber);text-shadow:0 0 8px var(--amber)}
+.mfav{display:inline-block;background:none;border:1px solid var(--border);
+  color:var(--muted);font-family:inherit;font-size:11.5px;letter-spacing:2px;
+  padding:7px 14px;cursor:pointer;margin:2px 0 12px}
+.mfav:hover{color:var(--amber);border-color:var(--amber)}
+.mfav.on{color:var(--amber);border-color:var(--amber)}
+.vsrc{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.vsrc select{background:#000;border:1px solid var(--border);color:var(--text);
+  font-family:inherit;font-size:12.5px;padding:7px 8px;max-width:230px;cursor:pointer}
+.vsrc select:focus{border-color:var(--toxic);outline:none}
+.fix{padding:13px 16px;border-bottom:1px solid var(--dim)}
+.fix:last-child{border-bottom:none}
+.fix b{color:var(--blood);font-size:13.5px;display:block;margin-bottom:5px;letter-spacing:.5px}
+.fix span{color:var(--muted);font-size:12.5px;line-height:1.65;display:block}
+.fix span b{display:inline;color:var(--toxic);font-size:12.5px;margin:0}
+
+/* ================= mobile autopsy: lighter on small screens ================= */
+@media (max-width: 640px) {
+  .glitch::before, .glitch::after { animation: none; opacity: 0; }
+  header.hero { padding: 26px 0 6px; }
+  header.hero h1 { font-size: 34px; }
+  .stats { gap: 8px; margin: 18px 0; }
+  .stat { min-width: 0; flex: 1 1 44%; padding: 10px 12px; }
+  .stat b { font-size: 20px; }
+  .quarantine { font-size: 12px; }
+  .tiles { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; }
+  .tile { padding: 14px 12px; }
+  .toolbar { top: 0; }
+  .toolbar input { min-width: 0; }
+  #modal { padding: 10px; }
+  .mbox { padding: 18px 16px; }
+  #bootlog { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glitch::before, .glitch::after, .tile, .mbox, .cursor { animation: none !important; }
+  #rain { display: none; }
+}
+</style>
+</head>
+<body>
+<canvas id="rain"></canvas>
+
+<div id="boot">
+  <div id="bootterm"><pre id="bootlog"></pre></div>
+  <div class="bar"><div id="bootbar"></div></div>
+  <button id="bootskip">[ CLICK TO SKIP ]</button>
+</div>
+
+<nav class="tabs"><div class="wrap">
+  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide">[guide]</button><button class="tab active" data-t="home">[home]</button><button class="tab" data-t="faves">[faves]</button><button class="tab" id="searchtab">[search]</button><button class="tab" data-t="Social">social</button><button class="tab" data-t="Photo & video">photo & video</button><button class="tab" data-t="Music & video">music & video</button><button class="tab" data-t="AI">ai</button><button class="tab" data-t="Health">health</button><button class="tab" data-t="Learning">learning</button><button class="tab" data-t="Productivity">productivity</button><button class="tab" data-t="Travel">travel</button><button class="tab" data-t="Finance">finance</button><button class="tab" data-t="Utilities">utilities</button><button class="tab" data-t="Games">games</button><button class="tab" data-t="Other">other</button>
+</div></nav>
+
+<div class="wrap">
+  <div id="homepanels">
+    <header class="hero">
+      <h1 class="glitch" data-t="APP_HORDE">APP_HORDE</h1>
+      <p>{{HERO_LINE}}</p>
+      <div class="stats">
+        <div class="stat"><b data-c="{{STAT_HOSTS}}">0</b><span>UNIQUE HOSTS</span></div>
+        <div class="stat"><b data-c="{{STAT_STRAINS}}">0</b><span>STRAINS ANALYZED</span></div>
+        <div class="stat"><b>12</b><span>SECTORS</span></div>
+        <div class="stat"><b>{{STAT_SOURCES}}</b><span>SOURCES</span></div>
+      </div>
+      <div class="quarantine"><b>⚠ QUARANTINE NOTICE — DO YOUR OWN RESEARCH</b><br>
+        These are unofficial tweaked IPAs from sideloading repos — not App Store builds.
+        This site only <b>links</b> to files hosted by the repos; nothing here is uploaded or scanned.
+        Before installing anything: check the bundle ID, check the source, google the tweak name.
+        Star ratings verify the <i>original</i> app — never the modified file.
+        Side effects may include revoked certificates, banned accounts, and mild zombification.
+        Proceed at your own risk.</div>
+      <p class="gonewb">☣ new to the horde? <a href="#" data-goto="guide">read the field manual →</a></p>
+    </header>
+    <h2 class="sec">browse sectors</h2>
+    {{TILES}}
+    <h2 class="sec">most infected hosts</h2>
+    <div class="grid" id="topgrid"></div>
+    <h2 class="sec">top rated specimens</h2>
+    <p class="secsub">// highest app-store ratings — 5,000+ reviews minimum, original app not the modded file</p>
+    <div class="grid" id="rategrid"></div>
+  </div>
+
+  <div id="guidepanels" style="display:none"><header class="hero">
+  <h1 class="glitch" data-t="FIELD MANUAL">FIELD MANUAL</h1>
+  <p>New to the horde? This page takes you from zero to installed in about 15 minutes.
+     Pick a path, grab the tools, add the sources, done.</p>
+</header>
+
+<h2 class="sec">0 · what is sideloading</h2>
+<div class="quarantine" style="margin:0 0 18px"><b>☠ READ THIS FIRST</b><br>
+This site is an <b>index, not a host</b>. {{GUIDE_DISCLAIMER_SRC}} — I don't make, modify, or scan those files, and I can't vouch for any of them.<br><br>
+<b>Do your own research before installing anything:</b> confirm the bundle ID matches the real app ·
+check which source it came from and how fresh the build is · google the tweak name for scam reports ·
+never sideload banking, payment, or 2FA apps.<br><br>
+Not affiliated with Apple, the repos, or any app developer. Tweaked apps can be revoked, get accounts
+banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b></div>
+<div class="gbox">
+  <p>Normally your iPhone only installs apps from Apple's App Store. <b>Sideloading</b> means
+  installing app files (<b>.ipa</b> files) from outside the App Store. The apps in this horde are
+  <b>tweaked builds</b> — the original apps with mods like unlocked features or removed ads,
+  uploaded by the repos.</p>
+  <p>You need an <b>installer app</b> on your iPhone to sign and install them. Three ways to do it below —
+  pick the one that fits you.</p>
+</div>
+
+<h2 class="sec">1 · pick your path</h2>
+<div class="paths">
+  <div class="path">
+    <div class="ptag">easiest · no computer</div>
+    <h3>PATH A — certificate + Scarlet</h3>
+    <p class="pcost">Costs a little · apps never expire · no weekly refresh</p>
+    <ol>
+      <li>Get a signing certificate from a signing service (the FastSign team behind Alan's repo runs one). It's usually a small yearly fee.</li>
+      <li>On your iPhone, install <b>Scarlet</b> from the download links below, then trust its profile in <b>Settings → General → VPN &amp; Device Management</b>.</li>
+      <li>In Scarlet, import your certificate.</li>
+      <li>Browse this site, open any app, tap <b>⬇ GET</b>, then open the downloaded file in Scarlet and install.</li>
+    </ol>
+  </div>
+  <div class="path">
+    <div class="ptag">free · you have a computer</div>
+    <h3>PATH B — AltStore</h3>
+    <p class="pcost">Free · needs a Mac or Windows PC · refresh apps every 7 days · 3-app limit</p>
+    <ol>
+      <li>On your computer, install <b>AltServer</b> from the links below. On Windows you also need <b>iTunes</b> and <b>iCloud</b> from Apple's site (not the Microsoft Store).</li>
+      <li>Plug in your iPhone, open AltServer, and <b>Install AltStore</b> to your phone. Use a spare Apple ID if you like.</li>
+      <li>On your iPhone: <b>Settings → General → VPN &amp; Device Management</b> → trust the profile. On iOS 16+, also enable <b>Developer Mode</b> in <b>Settings → Privacy &amp; Security</b>.</li>
+      <li>Open AltStore → <b>Sources</b> tab → <b>+</b> → paste the source links from section 3. Now you can browse and install both repos right inside AltStore.</li>
+      <li>Re-open AltStore on the same Wi-Fi as your computer every 7 days to refresh your apps.</li>
+    </ol>
+  </div>
+  <div class="path">
+    <div class="ptag">free · no computer · older iOS only</div>
+    <h3>PATH C — TrollStore</h3>
+    <p class="pcost">Free · no computer · apps never expire · <b>only iOS 14.0 – 17.0</b> (never 17.0.1+)</p>
+    <ol>
+      <li>Check your version: <b>Settings → General → About → iOS Version</b>. If it's 17.0.1 or newer, this path won't work — use A or B.</li>
+      <li>Follow the official install guide linked below (TrollStore GitHub + ios.cfw.guide). It takes a few minutes.</li>
+      <li>Open TrollStore, tap <b>+</b>, and pick any .ipa you downloaded from this site. It installs permanently — no refresh, no revokes.</li>
+    </ol>
+  </div>
+</div>
+
+<h2 class="sec">2 · download links</h2>
+<p class="secsub">// only download these from their official sites — fakes carry malware</p>
+<div class="dllist">
+  <div class="dlrow"><div><b>AltServer</b><span>for Mac &amp; Windows — the free computer route (Path B)</span></div><a class="gbtn" href="https://altstore.io" target="_blank" rel="noopener">GET ↗</a></div>
+  <div class="dlrow"><div><b>iTunes for Windows</b><span>required for AltServer on Windows — from Apple, not the Microsoft Store</span></div><a class="gbtn" href="https://www.apple.com/itunes/" target="_blank" rel="noopener">GET ↗</a></div>
+  <div class="dlrow"><div><b>iCloud for Windows</b><span>also required for AltServer on Windows</span></div><a class="gbtn" href="https://support.apple.com/en-us/HT204283" target="_blank" rel="noopener">GET ↗</a></div>
+  <div class="dlrow"><div><b>SideStore</b><span>AltStore-style, refreshes over Wi-Fi after one-time PC setup — alternative to Path B</span></div><a class="gbtn" href="https://sidestore.io" target="_blank" rel="noopener">GET ↗</a></div>
+  <div class="dlrow"><div><b>Sideloadly</b><span>simple Windows/Mac tool for signing .ipa files — alternative to Path B</span></div><a class="gbtn" href="https://sideloadly.io" target="_blank" rel="noopener">GET ↗</a></div>
+  <div class="dlrow"><div><b>Scarlet</b><span>on-device installer, no computer needed — for Path A</span></div><a class="gbtn" href="https://usescarlet.com" target="_blank" rel="noopener">GET ↗</a></div>
+  <div class="dlrow"><div><b>TrollStore</b><span>permanent installs, no refresh — Path C, iOS 14.0–17.0 only</span></div><a class="gbtn" href="https://github.com/opa334/TrollStore" target="_blank" rel="noopener">GET ↗</a></div>
+  <div class="dlrow"><div><b>TrollStore install guide</b><span>official step-by-step at ios.cfw.guide</span></div><a class="gbtn" href="https://ios.cfw.guide/installing-trollstore" target="_blank" rel="noopener">GET ↗</a></div>
+</div>
+
+<h2 class="sec">3 · add the sources</h2>
+<div class="gbox">
+  <p>{{GUIDE_SRC_INTRO}}</p>
+{{GUIDE_SRC_ROWS}}
+</div>
+
+<h2 class="sec">4 · install from this site</h2>
+<div class="gbox">
+  <ol class="steps">
+    <li><b>Find an app</b> — search the horde or browse a sector.</li>
+    <li><b>Open its intel</b> — tap any card for details, ratings, and source info.</li>
+    <li><b>Tap ⬇ GET</b> — newest build is pre-selected, or open the version list to roll back to an older build.</li>
+    <li><b>Install it</b> — open the downloaded file in Scarlet / AltStore / SideStore / TrollStore and install. Trust the profile if iOS asks.</li>
+  </ol>
+</div>
+
+<h2 class="sec">5 · survival rules</h2>
+<div class="gbox rules">
+  <p><b>① Use a spare Apple ID</b> for signing — never your main one.</p>
+  <p><b>② Free Apple IDs expire every 7 days.</b> Re-open AltStore/SideStore on Wi-Fi to refresh before apps die.</p>
+  <p><b>③ Free/shared certificates get revoked.</b> If an app suddenly won't open, the cert died — re-sign it.</p>
+  <p><b>④ Tweaked ≠ official.</b> Star ratings here verify the <i>original</i> app, not the modified build. Mods can get accounts banned.</p>
+  <p><b>⑤ Never sideload banking, payment, or 2FA apps</b> from anywhere but the App Store.</p>
+  <p><b>⑥ If an app asks for logins it shouldn't need</b>, delete it. When in doubt, check the uploader and the FRESH badge.</p>
+</div>
+
+<h2 class="sec">6 · when things break</h2>
+<p class="secsub">// the errors every beginner hits, and the fix for each</p>
+<div class="dllist">
+  <div class="fix"><b>✗ "Unable to Verify App"</b><span>Your certificate was revoked or expired. Re-sign the app: in Scarlet re-import your certificate and reinstall; in AltStore/SideStore open the app and refresh. Free/shared certificates die often — this is normal.</span></div>
+  <div class="fix"><b>✗ App installs but crashes instantly</b><span>Three usual causes: dead certificate (fix above), the build needs a newer iOS than you have (check REQUIRES iOS in the app's intel), or the tweak itself is broken. Try an older build from the version picker in the app's intel.</span></div>
+  <div class="fix"><b>✗ AltStore says "Could not find AltServer"</b><span>Your iPhone and computer must be on the same Wi-Fi, AltServer must be running, and iTunes (from Apple, not the Microsoft Store) must see your phone. Plug in with a cable once to re-pair.</span></div>
+  <div class="fix"><b>✗ AltServer doesn't see my iPhone</b><span>Unlock the phone, tap Trust on both ends, and make sure Wi-Fi sync is enabled in iTunes/Finder. Restart AltServer if it still hides.</span></div>
+  <div class="fix"><b>✗ "Developer Mode Required" (iOS 16+)</b><span>Go to Settings → Privacy &amp; Security → Developer Mode, turn it on, and restart when asked. Then trust the profile again.</span></div>
+  <div class="fix"><b>✗ Scarlet / ESign itself won't open</b><span>Its own certificate got revoked by Apple. Wait for the service to issue a new one, or switch to AltStore/SideStore with your own Apple ID.</span></div>
+  <div class="fix"><b>✗ "App integrity could not be verified"</b><span>Same as a revoked certificate — re-sign and reinstall the app.</span></div>
+  <div class="fix"><b>✗ TrollStore won't install an app</b><span>Check your iOS version: TrollStore only works on 14.0–17.0, never 17.0.1+. Also use .tipa builds (marked TIPA in the version picker) for TrollStore-only apps.</span></div>
+  <div class="fix"><b>✗ Download link is dead</b><span>Try the other source's button in the app's intel, or pick an older build from the version picker. Repo CDNs move files around.</span></div>
+  <div class="fix"><b>✗ "You hit the 3-app limit"</b><span>Free Apple IDs can only keep 3 sideloaded apps active. Delete one in AltStore/SideStore to make room, or look into LiveContainer to bundle more.</span></div>
+</div>
+
+<h2 class="sec">7 · verify before you install</h2>
+<p class="secsub">// every app's intel panel runs these checks for you — here's what they mean, and what to check yourself</p>
+<div class="gbox rules">
+  <p><b>① Open the app's intel and read the VERIFICATION row.</b> It automatically checks three things: whether the bundle ID matches a real App Store listing, how many independent repos carry the app, and whether the repo's build version lines up with the App Store's current release.</p>
+  <p><b>② Bundle ID must match.</b> A ✓ means the ID belongs to the real app. ✗ means no App Store record exists — treat it with extra suspicion or skip it.</p>
+  <p><b>③ More repos beats one.</b> An app listed by several independent repos is a weak positive signal. A lone upload to a single repo deserves a harder look.</p>
+  <p><b>④ The version must make sense.</b> If a repo build claims a <i>newer</i> version than the App Store currently has, walk away — that's a classic fake. Older builds are usually just outdated.</p>
+  <p><b>⑤ Check the tweak name.</b> The TWEAKS row says what's modified. Google "<i>tweak name</i> malware" and "<i>tweak name</i> scam" before installing anything that handles logins or money.</p>
+  <p><b>⑥ After downloading, check the file.</b> A real .ipa is tens to hundreds of MB — a 2 MB "Spotify" is not Spotify. When your installer asks you to trust a certificate, make sure you recognize whose it is.</p>
+  <p><b>⑦ Nothing here proves safety.</b> These checks catch fakes and sloppiness, not a well-made trojan. If an app asks for permissions or logins it shouldn't need, delete it.</p>
+</div>
+</div>
+
+  <h2 class="sec" id="sectitle"></h2>
+  <p class="secsub" id="secsub"></p>
+  <div class="toolbar" id="toolbar">
+    <input id="q" type="search" placeholder="&gt; search the horde...  ( / )">
+    <select id="sort">
+      <option value="alpha">Name A–Z</option>
+      <option value="strains">Most builds</option>
+      <option value="recent">Recently updated</option>
+      <option value="rated">Top rated ★</option>
+    </select>
+    <select id="srcf">
+      <option value="all">All sources</option>
+{{SRC_OPTIONS}}
+    </select>
+  </div>
+  <div class="grid" id="grid" style="display:none"></div>
+  <div class="empty" id="empty" style="display:none">☠ NO HOSTS MATCH THIS QUERY</div>
+</div>
+
+<div id="modal"><div class="mbox" id="mbody"></div></div>
+
+<footer><span class="skull">☣</span><br>
+built from {{FOOTER_SOURCES}} — deduped &amp; app-store verified<br>
+this whole site was coded by strider, my AI assistant (Muse)<br>
+<span class="invite">☠ check out <a href="https://muse.ai/join" target="_blank" rel="noopener">Muse, your personal AI agent</a> — redeem my code <code>MG9C6Z</code><button class="cpy" data-c="MG9C6Z">COPY</button> in Settings within 48 hours of joining and we'll both get 1 billion Muse tokens ☠</span><br>
+unofficial builds — do your own research · use at your own risk<br>
+corrections or removal requests → <a href="https://github.com/crtGhoul" target="_blank" rel="noopener">crtghoul on github</a><br>
+the horde remembers · for reference only · data as of {{DATA_DATE}}<br>
+next refresh in <span id="nxupd">…</span> · the horde feeds every monday</footer>
+
+<script>/* =========================================================================
+ * APP_HORDE — client
+ *
+ *  1. Data            (DB injected by build.py)
+ *  2. Helpers         (escaping, formatting)
+ *  3. Boot sequence   (fake UNDEAD BIOS, skippable)
+ *  4. Hero counters
+ *  5. Digital rain
+ *  6. Category tabs
+ *  7. Card grid       (search, sort, source filter, batched render)
+ *  8. Intel modal     (deep-linkable via #app=<name>)
+ *  9. Keyboard shortcuts
+ * ========================================================================= */
+
+/* ---------- 1. Data ---------- */
+const DB = 
