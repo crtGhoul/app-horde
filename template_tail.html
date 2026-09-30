@@ -145,6 +145,12 @@ function setTab(t, keepHash = false) {
     sectTitle.innerHTML = '<span class="glitch" data-t="STARRED">STARRED</span> <span style="color:var(--red)">SPECIMENS</span>';
     secSub.textContent = '// ' + favs.size + ' specimens in your stash';
     render();
+  } else if (t === 'top25') {
+    document.getElementById('homepanels').style.display = 'none';
+    grid.style.display = 'grid';
+    sectTitle.innerHTML = '<span class="glitch" data-t="TOP 25">TOP 25</span> <span style="color:var(--red)">MOST WANTED</span>';
+    secSub.textContent = '// ranked by real App Store review count — the closest thing to a popularity chart';
+    render();
   } else if (t === 'home') {
     grid.style.display = 'none'; emptyMsg.style.display = 'none';
     document.getElementById('homepanels').style.display = 'block';
@@ -165,7 +171,43 @@ function setTab(t, keepHash = false) {
 }
 
 /* ---------- 7. Card grid ---------- */
+/* Top 25: most App Store reviews across the whole horde, deduped by name. */
+function fmtCount(c) {
+  if (c >= 1e6) return (c / 1e6).toFixed(1) + 'M';
+  if (c >= 1e3) return (c / 1e3).toFixed(1) + 'k';
+  return '' + c;
+}
+function top25() {
+  const seen = new Set(), listed = new Set(), out = [];
+  for (const apps of Object.values(DB.cats))
+    for (const a of apps) {
+      if (seen.has(a.name)) continue;
+      seen.add(a.name);
+      if (!a.it || !a.it.c) continue;
+      const listing = a.it.name || a.name;
+      if (listed.has(listing)) continue;
+      listed.add(listing);
+      out.push(a);
+    }
+  out.sort((x, y) => y.it.c - x.it.c);
+  const top = out.slice(0, 25);
+  top.forEach((a, i) => { a._rank = i + 1; });
+  return top;
+}
 function filtered() {
+  if (tab === 'top25') {
+    let apps = top25();
+    if (srcFilter !== 'all')
+      apps = apps.filter(a => a.src.includes(srcFilter));
+    if (q) {
+      const needle = q.toLowerCase();
+      apps = apps.filter(a =>
+        a.name.toLowerCase().includes(needle) ||
+        (a.dev || '').toLowerCase().includes(needle) ||
+        a.bundle.some(b => b.toLowerCase().includes(needle)));
+    }
+    return apps;
+  }
   // any query searches the entire horde, not just the current sector
   let apps = q ? Object.values(DB.cats).flat()
              : tab === 'faves' ? favApps() : DB.cats[tab] || [];
@@ -209,7 +251,7 @@ function cardHTML(a) {
   const tweak = a.tweak ? `<div class="tp">${esc(a.tweak)}</div>` : '';
   const fav = favs.has(a.name);
   return `<div class="card" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
-    <div class="badge">${a.n} STRAINS</div>
+    <div class="badge">${a.n} STRAINS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
     <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" title="stash this one">${fav ? '★' : '☆'}</button></div></div>
     <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
     <div class="pd">${pills}</div>
