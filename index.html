@@ -238,8 +238,9 @@ footer .skull{color:var(--blood);font-size:15px}
 .gbox .bid code{word-break:break-all}
 .rules p{border-left:3px solid var(--blood);padding-left:12px;margin-bottom:14px !important}
 .rules b{color:var(--amber)}
-.gonewb{margin-top:14px;font-size:13.5px;color:var(--muted)}
-.gonewb a{color:var(--toxic);font-weight:700}
+.ctawrap{text-align:center;margin:22px 0 8px}
+.cta{background:var(--toxic);color:#04140a;border:none;font-weight:800;font-size:15px;letter-spacing:1px;padding:15px 30px;border-radius:4px;cursor:pointer}
+.cta:hover{filter:brightness(1.12)}
 
 /* ================= favorites + version picker + fixes ================= */
 .fstar{background:none;border:none;font:inherit;color:var(--muted);font-size:15px;
@@ -294,17 +295,17 @@ footer .skull{color:var(--blood);font-size:15px}
 </div>
 
 <nav class="tabs"><div class="wrap">
-  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide">[guide]</button><button class="tab active" data-t="home">[home]</button><button class="tab" data-t="faves">[faves]</button><button class="tab" data-t="top25">[top 25]</button><button class="tab" id="searchtab">[search]</button><button class="tab" data-t="Social">social</button><button class="tab" data-t="Photo & video">photo & video</button><button class="tab" data-t="Music & video">music & video</button><button class="tab" data-t="AI">ai</button><button class="tab" data-t="Health">health</button><button class="tab" data-t="Learning">learning</button><button class="tab" data-t="Productivity">productivity</button><button class="tab" data-t="Travel">travel</button><button class="tab" data-t="Finance">finance</button><button class="tab" data-t="Utilities">utilities</button><button class="tab" data-t="Games">games</button><button class="tab" data-t="Other">other</button>
+  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide">[guide]</button><button class="tab active" data-t="home">[home]</button><button class="tab" data-t="faves">[faves]</button><button class="tab" data-t="top25">[top 25]</button><button class="tab" id="searchtab">[search]</button>
 </div></nav>
 
 <div class="wrap">
   <div id="homepanels">
     <header class="hero">
       <h1 class="glitch" data-t="APP_HORDE">APP_HORDE</h1>
-      <p>3,872 unique hosts indexed · 26,398 strains analyzed · 67% verified against the App Store. Select a sector, run a query, sort by infection count — or skim the top rated.</p>
+      <p>3,872 apps indexed · 26,398 builds analyzed · 67% verified against the App Store. Select a category, run a query, sort by build count — or skim the top rated.</p>
       <div class="stats">
-        <div class="stat"><b data-c="3,872">0</b><span>UNIQUE HOSTS</span></div>
-        <div class="stat"><b data-c="26,398">0</b><span>STRAINS ANALYZED</span></div>
+        <div class="stat"><b data-c="3,872">0</b><span>APPS</span></div>
+        <div class="stat"><b data-c="26,398">0</b><span>BUILDS</span></div>
         <div class="stat"><b>12</b><span>SECTORS</span></div>
         <div class="stat"><b>12</b><span>SOURCES</span></div>
       </div>
@@ -315,13 +316,13 @@ footer .skull{color:var(--blood);font-size:15px}
         Star ratings verify the <i>original</i> app — never the modified file.
         Side effects may include revoked certificates, banned accounts, and mild zombification.
         Proceed at your own risk.</div>
-      <p class="gonewb">☣ new to the horde? <a href="#" data-goto="guide">read the field manual →</a></p>
+      <div class="ctawrap"><button class="cta" data-goto="guide">☣ NEW HERE? READ THE FIELD MANUAL →</button></div>
     </header>
-    <h2 class="sec">browse sectors</h2>
+    <h2 class="sec">browse categories</h2>
         <div class="tiles"><div class="tile" data-t="Social"><b>18</b><span>social</span></div><div class="tile" data-t="Photo & video"><b>40</b><span>photo & video</span></div><div class="tile" data-t="Music & video"><b>16</b><span>music & video</span></div><div class="tile" data-t="AI"><b>57</b><span>ai</span></div><div class="tile" data-t="Health"><b>22</b><span>health</span></div><div class="tile" data-t="Learning"><b>7</b><span>learning</span></div><div class="tile" data-t="Productivity"><b>21</b><span>productivity</span></div><div class="tile" data-t="Travel"><b>5</b><span>travel</span></div><div class="tile" data-t="Finance"><b>2</b><span>finance</span></div><div class="tile" data-t="Utilities"><b>19</b><span>utilities</span></div><div class="tile" data-t="Games"><b>27</b><span>games</span></div><div class="tile" data-t="Other"><b>3,638</b><span>other</span></div></div>
-    <h2 class="sec">most infected hosts</h2>
+    <h2 class="sec">most wanted</h2>
     <div class="grid" id="topgrid"></div>
-    <h2 class="sec">top rated specimens</h2>
+    <h2 class="sec">top rated apps</h2>
     <p class="secsub">// highest app-store ratings — 5,000+ reviews minimum, original app not the modded file</p>
     <div class="grid" id="rategrid"></div>
   </div>
@@ -499,7 +500,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
     </select>
   </div>
   <div class="grid" id="grid" style="display:none"></div>
-  <div class="empty" id="empty" style="display:none">☠ NO HOSTS MATCH THIS QUERY</div>
+  <div class="empty" id="empty" style="display:none">☠ NO APPS MATCH THIS QUERY</div>
 </div>
 
 <div id="modal"><div class="mbox" id="mbody"></div></div>
@@ -568,7 +569,7 @@ function buildBootLines() {
     const label = ((DB.srcmeta || {})[k] || {}).label || k.toUpperCase();
     lines.push(esc(label.toUpperCase()) + ' ' +
       '.'.repeat(Math.max(2, 34 - label.length)) + ' ' +
-      (r.entries || 0).toLocaleString() + ' strains');
+      (r.entries || 0).toLocaleString() + ' builds');
   });
   lines.push('DECRYPTING REPOS ... <span class="g">OK</span>',
     'CONTAINMENT: <span class="r">BREACHED</span>',
@@ -672,8 +673,8 @@ function setTab(t, keepHash = false) {
   } else if (t === 'faves') {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
-    sectTitle.innerHTML = '<span class="glitch" data-t="STARRED">STARRED</span> <span style="color:var(--red)">SPECIMENS</span>';
-    secSub.textContent = '// ' + favs.size + ' specimens in your stash';
+    sectTitle.innerHTML = '<span class="glitch" data-t="STARRED">STARRED</span> <span style="color:var(--red)">APPS</span>';
+    secSub.textContent = '// ' + favs.size + ' apps in your stash';
     render();
   } else if (t === 'top25') {
     document.getElementById('homepanels').style.display = 'none';
@@ -684,14 +685,14 @@ function setTab(t, keepHash = false) {
   } else if (t === 'home') {
     grid.style.display = 'none'; emptyMsg.style.display = 'none';
     document.getElementById('homepanels').style.display = 'block';
-    sectTitle.innerHTML = 'SELECT <span class="glitch" data-t="SECTOR">SECTOR</span>';
+    sectTitle.innerHTML = 'SELECT <span class="glitch" data-t="CATEGORY">CATEGORY</span>';
     secSub.textContent = '// pick a category to breach its vault';
   } else {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
     sectTitle.innerHTML = '<span class="glitch" data-t="' + esc(t.toUpperCase()) + '">' +
-      esc(t.toUpperCase()) + '</span> <span style="color:var(--red)">SECTOR</span>';
-    secSub.textContent = '// ' + DB.counts[t] + ' specimens contained';
+      esc(t.toUpperCase()) + '</span> <span style="color:var(--red)">CATEGORY</span>';
+    secSub.textContent = '// ' + DB.counts[t] + ' apps listed';
     render();
   }
   if (!keepHash) {
@@ -738,7 +739,7 @@ function filtered() {
     }
     return apps;
   }
-  // any query searches the entire horde, not just the current sector
+  // any query searches the entire horde, not just the current category
   let apps = q ? Object.values(DB.cats).flat()
              : tab === 'faves' ? favApps() : DB.cats[tab] || [];
   if (srcFilter !== 'all')
@@ -781,7 +782,7 @@ function cardHTML(a) {
   const tweak = a.tweak ? `<div class="tp">${esc(a.tweak)}</div>` : '';
   const fav = favs.has(a.name);
   return `<div class="card" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
-    <div class="badge">${a.n} STRAINS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
+    <div class="badge">${a.n} BUILDS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
     <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" title="stash this one">${fav ? '★' : '☆'}</button></div></div>
     <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
     <div class="pd">${pills}</div>
@@ -798,7 +799,7 @@ function render() {
   emptyMsg.style.display = apps.length ? 'none' : 'block';
   if (q) {
     sectTitle.innerHTML = '<span class="glitch" data-t="RESULTS">RESULTS</span>';
-    secSub.textContent = '// ' + apps.length + ' matches across all sectors';
+    secSub.textContent = '// ' + apps.length + ' matches across all categories';
   }
   let i = 0;
   const io = new IntersectionObserver(es => es.forEach(e => {
@@ -852,7 +853,7 @@ function syncFavUI() {
     mf.classList.toggle('on', on);
   }
   if (tab === 'faves') {
-    secSub.textContent = '// ' + favs.size + ' specimens in your stash';
+    secSub.textContent = '// ' + favs.size + ' apps in your stash';
     render();
   }
 }
@@ -961,7 +962,7 @@ function openModal(name, sector, pushHash = true) {
     <button class="mx" id="mx">✕</button>
     <h3 class="glitch" data-t="${esc(a.name)}">${esc(a.name)}</h3>
     <button id="mfav" class="mfav" data-name="${esc(a.name)}">☆ SAVE</button>
-    <div class="msec">${esc(sector)} SECTOR</div>
+    <div class="msec">${esc(sector)} CATEGORY</div>
     ${row('SOURCES', srcRows(a))}
     ${row('DOWNLOAD', dlRow(a))}
     ${a.minos ? row('REQUIRES', 'iOS ' + esc(a.minos) + '+') : ''}

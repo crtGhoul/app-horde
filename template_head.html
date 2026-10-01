@@ -238,8 +238,9 @@ footer .skull{color:var(--blood);font-size:15px}
 .gbox .bid code{word-break:break-all}
 .rules p{border-left:3px solid var(--blood);padding-left:12px;margin-bottom:14px !important}
 .rules b{color:var(--amber)}
-.gonewb{margin-top:14px;font-size:13.5px;color:var(--muted)}
-.gonewb a{color:var(--toxic);font-weight:700}
+.ctawrap{text-align:center;margin:22px 0 8px}
+.cta{background:var(--toxic);color:#04140a;border:none;font-weight:800;font-size:15px;letter-spacing:1px;padding:15px 30px;border-radius:4px;cursor:pointer}
+.cta:hover{filter:brightness(1.12)}
 
 /* ================= favorites + version picker + fixes ================= */
 .fstar{background:none;border:none;font:inherit;color:var(--muted);font-size:15px;
@@ -294,7 +295,7 @@ footer .skull{color:var(--blood);font-size:15px}
 </div>
 
 <nav class="tabs"><div class="wrap">
-  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide">[guide]</button><button class="tab active" data-t="home">[home]</button><button class="tab" data-t="faves">[faves]</button><button class="tab" data-t="top25">[top 25]</button><button class="tab" id="searchtab">[search]</button><button class="tab" data-t="Social">social</button><button class="tab" data-t="Photo & video">photo & video</button><button class="tab" data-t="Music & video">music & video</button><button class="tab" data-t="AI">ai</button><button class="tab" data-t="Health">health</button><button class="tab" data-t="Learning">learning</button><button class="tab" data-t="Productivity">productivity</button><button class="tab" data-t="Travel">travel</button><button class="tab" data-t="Finance">finance</button><button class="tab" data-t="Utilities">utilities</button><button class="tab" data-t="Games">games</button><button class="tab" data-t="Other">other</button>
+  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide">[guide]</button><button class="tab active" data-t="home">[home]</button><button class="tab" data-t="faves">[faves]</button><button class="tab" data-t="top25">[top 25]</button><button class="tab" id="searchtab">[search]</button>
 </div></nav>
 
 <div class="wrap">
@@ -303,8 +304,8 @@ footer .skull{color:var(--blood);font-size:15px}
       <h1 class="glitch" data-t="APP_HORDE">APP_HORDE</h1>
       <p>{{HERO_LINE}}</p>
       <div class="stats">
-        <div class="stat"><b data-c="{{STAT_HOSTS}}">0</b><span>UNIQUE HOSTS</span></div>
-        <div class="stat"><b data-c="{{STAT_STRAINS}}">0</b><span>STRAINS ANALYZED</span></div>
+        <div class="stat"><b data-c="{{STAT_HOSTS}}">0</b><span>APPS</span></div>
+        <div class="stat"><b data-c="{{STAT_STRAINS}}">0</b><span>BUILDS</span></div>
         <div class="stat"><b>12</b><span>SECTORS</span></div>
         <div class="stat"><b>{{STAT_SOURCES}}</b><span>SOURCES</span></div>
       </div>
@@ -315,13 +316,13 @@ footer .skull{color:var(--blood);font-size:15px}
         Star ratings verify the <i>original</i> app — never the modified file.
         Side effects may include revoked certificates, banned accounts, and mild zombification.
         Proceed at your own risk.</div>
-      <p class="gonewb">☣ new to the horde? <a href="#" data-goto="guide">read the field manual →</a></p>
+      <div class="ctawrap"><button class="cta" data-goto="guide">☣ NEW HERE? READ THE FIELD MANUAL →</button></div>
     </header>
-    <h2 class="sec">browse sectors</h2>
+    <h2 class="sec">browse categories</h2>
     {{TILES}}
-    <h2 class="sec">most infected hosts</h2>
+    <h2 class="sec">most wanted</h2>
     <div class="grid" id="topgrid"></div>
-    <h2 class="sec">top rated specimens</h2>
+    <h2 class="sec">top rated apps</h2>
     <p class="secsub">// highest app-store ratings — 5,000+ reviews minimum, original app not the modded file</p>
     <div class="grid" id="rategrid"></div>
   </div>
@@ -476,7 +477,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
     </select>
   </div>
   <div class="grid" id="grid" style="display:none"></div>
-  <div class="empty" id="empty" style="display:none">☠ NO HOSTS MATCH THIS QUERY</div>
+  <div class="empty" id="empty" style="display:none">☠ NO APPS MATCH THIS QUERY</div>
 </div>
 
 <div id="modal"><div class="mbox" id="mbody"></div></div>

@@ -38,7 +38,7 @@ function buildBootLines() {
     const label = ((DB.srcmeta || {})[k] || {}).label || k.toUpperCase();
     lines.push(esc(label.toUpperCase()) + ' ' +
       '.'.repeat(Math.max(2, 34 - label.length)) + ' ' +
-      (r.entries || 0).toLocaleString() + ' strains');
+      (r.entries || 0).toLocaleString() + ' builds');
   });
   lines.push('DECRYPTING REPOS ... <span class="g">OK</span>',
     'CONTAINMENT: <span class="r">BREACHED</span>',
@@ -142,8 +142,8 @@ function setTab(t, keepHash = false) {
   } else if (t === 'faves') {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
-    sectTitle.innerHTML = '<span class="glitch" data-t="STARRED">STARRED</span> <span style="color:var(--red)">SPECIMENS</span>';
-    secSub.textContent = '// ' + favs.size + ' specimens in your stash';
+    sectTitle.innerHTML = '<span class="glitch" data-t="STARRED">STARRED</span> <span style="color:var(--red)">APPS</span>';
+    secSub.textContent = '// ' + favs.size + ' apps in your stash';
     render();
   } else if (t === 'top25') {
     document.getElementById('homepanels').style.display = 'none';
@@ -154,14 +154,14 @@ function setTab(t, keepHash = false) {
   } else if (t === 'home') {
     grid.style.display = 'none'; emptyMsg.style.display = 'none';
     document.getElementById('homepanels').style.display = 'block';
-    sectTitle.innerHTML = 'SELECT <span class="glitch" data-t="SECTOR">SECTOR</span>';
+    sectTitle.innerHTML = 'SELECT <span class="glitch" data-t="CATEGORY">CATEGORY</span>';
     secSub.textContent = '// pick a category to breach its vault';
   } else {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
     sectTitle.innerHTML = '<span class="glitch" data-t="' + esc(t.toUpperCase()) + '">' +
-      esc(t.toUpperCase()) + '</span> <span style="color:var(--red)">SECTOR</span>';
-    secSub.textContent = '// ' + DB.counts[t] + ' specimens contained';
+      esc(t.toUpperCase()) + '</span> <span style="color:var(--red)">CATEGORY</span>';
+    secSub.textContent = '// ' + DB.counts[t] + ' apps listed';
     render();
   }
   if (!keepHash) {
@@ -208,7 +208,7 @@ function filtered() {
     }
     return apps;
   }
-  // any query searches the entire horde, not just the current sector
+  // any query searches the entire horde, not just the current category
   let apps = q ? Object.values(DB.cats).flat()
              : tab === 'faves' ? favApps() : DB.cats[tab] || [];
   if (srcFilter !== 'all')
@@ -251,7 +251,7 @@ function cardHTML(a) {
   const tweak = a.tweak ? `<div class="tp">${esc(a.tweak)}</div>` : '';
   const fav = favs.has(a.name);
   return `<div class="card" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
-    <div class="badge">${a.n} STRAINS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
+    <div class="badge">${a.n} BUILDS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
     <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" title="stash this one">${fav ? '★' : '☆'}</button></div></div>
     <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
     <div class="pd">${pills}</div>
@@ -268,7 +268,7 @@ function render() {
   emptyMsg.style.display = apps.length ? 'none' : 'block';
   if (q) {
     sectTitle.innerHTML = '<span class="glitch" data-t="RESULTS">RESULTS</span>';
-    secSub.textContent = '// ' + apps.length + ' matches across all sectors';
+    secSub.textContent = '// ' + apps.length + ' matches across all categories';
   }
   let i = 0;
   const io = new IntersectionObserver(es => es.forEach(e => {
@@ -322,7 +322,7 @@ function syncFavUI() {
     mf.classList.toggle('on', on);
   }
   if (tab === 'faves') {
-    secSub.textContent = '// ' + favs.size + ' specimens in your stash';
+    secSub.textContent = '// ' + favs.size + ' apps in your stash';
     render();
   }
 }
@@ -431,7 +431,7 @@ function openModal(name, sector, pushHash = true) {
     <button class="mx" id="mx">✕</button>
     <h3 class="glitch" data-t="${esc(a.name)}">${esc(a.name)}</h3>
     <button id="mfav" class="mfav" data-name="${esc(a.name)}">☆ SAVE</button>
-    <div class="msec">${esc(sector)} SECTOR</div>
+    <div class="msec">${esc(sector)} CATEGORY</div>
     ${row('SOURCES', srcRows(a))}
     ${row('DOWNLOAD', dlRow(a))}
     ${a.minos ? row('REQUIRES', 'iOS ' + esc(a.minos) + '+') : ''}

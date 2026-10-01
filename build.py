@@ -535,9 +535,9 @@ def render(db, verified, out_path):
         "{{OG_DESC}}": f"{unique:,} apps · {total:,} builds indexed, App Store-verified, "
                        f"with risk signals and a beginner field manual. Free, no signup.",
         "{{TW_DESC}}": f"{unique:,} sideloadable iOS apps, App Store-verified, with risk signals. Free, no signup.",
-        "{{HERO_LINE}}": f"{unique:,} unique hosts indexed · {total:,} strains analyzed · "
-                         f"{pct}% verified against the App Store. Select a sector, run a query, "
-                         f"sort by infection count — or skim the top rated.",
+        "{{HERO_LINE}}": f"{unique:,} apps indexed · {total:,} builds analyzed · "
+                         f"{pct}% verified against the App Store. Select a category, run a query, "
+                         f"sort by build count — or skim the top rated.",
         "{{STAT_HOSTS}}": f"{unique:,}",
         "{{STAT_STRAINS}}": f"{total:,}",
         "{{STAT_SOURCES}}": str(nsrc),
