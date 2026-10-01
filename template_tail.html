@@ -77,7 +77,7 @@ function endBoot() {
 /* ---------- 4. Hero counters ---------- */
 function animateCounters() {
   document.querySelectorAll('.stat b[data-c]').forEach(el => {
-    const target = +el.dataset.c, t0 = performance.now(), dur = 1400;
+    const target = parseFloat(String(el.dataset.c).replace(/[^0-9.]/g, '')) || 0, t0 = performance.now(), dur = 1400;
     (function tick(t) {
       const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
       el.textContent = Math.floor(target * e).toLocaleString();
