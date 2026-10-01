@@ -157,6 +157,40 @@ CATEGORY_KEYWORDS = [
 _CAT_RX = [(sec, [re.compile(r"\b" + re.escape(k) + r"\b") for k in kws])
           for sec, kws in CATEGORY_KEYWORDS]
 
+SEO_PREFIX = re.compile(r"^[a-z0-9.-]+\.(com|net|org|io|dev|app)\s*\|\s*", re.I)
+SEO_INTRO = re.compile(r"^what is .*? IPA\?\s*", re.I)
+def clean_desc(d):
+    """Strip scraper SEO junk ('domain.tld |', 'What is X IPA?') from a description."""
+    d = (d or "").strip()
+    d = SEO_PREFIX.sub("", d)
+    d = SEO_INTRO.sub("", d)
+    return d.strip()
+def is_junk_desc(d):
+    """True when a description is empty, stub-short, or mostly non-Latin script."""
+    if not d or len(d) < 40:
+        return True
+    latin = sum(1 for c in d if "a" <= c.lower() <= "z")
+    return latin < len(d) * 0.5
+
+def cmp_ver(x, y):
+    """Compare dotted version strings. Returns -1/0/1, or None if unparseable."""
+    px = [int(p) for p in re.findall(r"\d+", str(x or ""))]
+    py = [int(p) for p in re.findall(r"\d+", str(y or ""))]
+    if not px or not py:
+        return None
+    n = max(len(px), len(py))
+    px += [0] * (n - len(px)); py += [0] * (n - len(py))
+    for a, b in zip(px, py):
+        if a != b:
+            return -1 if a < b else 1
+    return 0
+def version_suspicious(a):
+    """Mirror of the UI's 'suspicious, walk away' verdict: the sideloaded build
+    claims a newer version than the App Store has."""
+    itv = (a.get("it") or {}).get("v")
+    lv = a.get("lv")
+    return bool(itv and lv and cmp_ver(lv, itv) == 1)
+
 def keyword_sector(low):
     """Best-guess category from app name + description text. '' if no match."""
     compact = re.sub(r"\s+", "", low)
@@ -372,6 +406,7 @@ def itunes_lookup(bundles):
                     "g": r.get("primaryGenreName") or "",
                     "v": r.get("version") or "",
                     "art": art.replace("100x100bb.jpg", "256x256bb.jpg") if art else "",
+                    "d": (r.get("description") or "").strip(),
                 }
         except Exception as e:
             print(f"  ! itunes batch failed: {e}", flush=True)
@@ -431,8 +466,13 @@ def build_db(fetched, seed, old_db):
     # which bundles need fresh App Store lookups? (seed is name-keyed)
     need = set()
     for gkey, recs in groups.items():
-        if not has_it(seed.get(gkey, {}).get("it")):
+        sit = seed.get(gkey, {}).get("it")
+        if not has_it(sit):
             for b in bundle_rank(recs):
+                need.add(b)
+        elif not (sit or {}).get("d"):
+            # seeded App Store record predates description capture — backfill it
+            for b in bundle_rank(recs)[:2]:
                 need.add(b)
     print(f"  itunes lookups needed: {len(need)} (rest seeded)", flush=True)
     fresh_it = itunes_lookup(need) if need else {}
@@ -476,6 +516,12 @@ def build_db(fetched, seed, old_db):
         tweak = seedrec.get("tweak") or extract_tweak(texts)
 
         it = app_it(gkey, recs)
+        if it and not it.get("d"):
+            for b in bundle_rank(recs):
+                f = fresh_it.get(b)
+                if f and f.get("d"):
+                    it["d"] = f["d"]
+                    break
 
         genre = (it or {}).get("g", "")
         low = (name + " " + " ".join(texts[:3])).lower()
@@ -521,8 +567,12 @@ def build_db(fetched, seed, old_db):
                                      f"({rb[:18]}…) — identity unverified"])
                 break
 
-        desc = seedrec.get("desc")
-        if not desc:
+        desc = clean_desc(seedrec.get("desc"))
+        if is_junk_desc(desc):
+            desc = clean_desc((it or {}).get("d", ""))
+            if len(desc) > 320:
+                desc = desc[:320].rsplit(" ", 1)[0] + "…"
+        if is_junk_desc(desc):
             bits = []
             if genre:
                 bits.append(genre + " app")
@@ -551,14 +601,16 @@ def build_db(fetched, seed, old_db):
     total = sum(a["n"] for a in apps)
     verified = sum(1 for a in apps if a["it"])
     toprated = sorted(
-        [a for a in apps if a["it"] and a["it"]["c"] >= MIN_RATINGS_TOP],
+        [a for a in apps if a["it"] and a["it"]["c"] >= MIN_RATINGS_TOP
+         and not version_suspicious(a)],
         key=lambda a: (-a["it"]["r"], -a["it"]["c"]))[:12]
 
     repos = {k: {"entries": len(ma)} for k, (_, ma) in fetched.items()}
     db = {
         "cats": cats,
         "counts": {c: len(v) for c, v in cats.items()},
-        "top": sorted(apps, key=lambda a: -a["n"])[:12],
+        "top": [a for a in sorted(apps, key=lambda a: -a["n"])
+                if not version_suspicious(a)][:12],
         "toprated": toprated,
         "total": total,
         "unique": len(apps),
