@@ -143,7 +143,7 @@ function setTab(t, keepHash = false) {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
     sectTitle.innerHTML = '<span class="glitch" data-t="STARRED">STARRED</span> <span style="color:var(--red)">APPS</span>';
-    secSub.textContent = '// ' + favs.size + ' apps in your stash';
+    secSub.textContent = '// ' + favs.size + ' apps in your favorites';
     render();
   } else if (t === 'top25') {
     document.getElementById('homepanels').style.display = 'none';
@@ -155,7 +155,7 @@ function setTab(t, keepHash = false) {
     grid.style.display = 'none'; emptyMsg.style.display = 'none';
     document.getElementById('homepanels').style.display = 'block';
     sectTitle.innerHTML = 'SELECT <span class="glitch" data-t="CATEGORY">CATEGORY</span>';
-    secSub.textContent = '// pick a category to breach its vault';
+    secSub.textContent = '// pick a category to browse';
   } else {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
@@ -252,7 +252,7 @@ function cardHTML(a) {
   const fav = favs.has(a.name);
   return `<div class="card" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
     <div class="badge">${a.n} BUILDS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
-    <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" title="stash this one">${fav ? '★' : '☆'}</button></div></div>
+    <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" title="save to favorites">${fav ? '★' : '☆'}</button></div></div>
     <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
     <div class="pd">${pills}</div>
     ${tweak}
@@ -322,7 +322,7 @@ function syncFavUI() {
     mf.classList.toggle('on', on);
   }
   if (tab === 'faves') {
-    secSub.textContent = '// ' + favs.size + ' apps in your stash';
+    secSub.textContent = '// ' + favs.size + ' apps in your favorites';
     render();
   }
 }
@@ -397,6 +397,27 @@ function updatedRow(a) {
     ? `${esc(a.updDate)} · <b style="color:var(--toxic)">${daysLabel(a.upd)}</b>`
     : 'unknown';
 }
+/* One-tap installer deep-links. Schemes verified 2026-10-01 against official
+   docs / production usage. Scarlet has no documented install scheme, so it is
+   deliberately omitted — Scarlet users get the direct download instead. */
+const INSTS = [
+  ['altstore', 'AltStore', 'altstore://install?url='],
+  ['sidestore', 'SideStore', 'sidestore://install?url='],
+  ['trollstore', 'TrollStore', 'apple-magnifier://install?url='],
+  ['feather', 'Feather', 'feather://install/'],
+];
+const REDIRECTOR = 'https://intradeus.github.io/http-protocol-redirector?r=';
+function installerLink(inst, ipaUrl) {
+  let deep;
+  if (inst === 'feather') {
+    // path-style scheme; encode only when the URL carries its own query string
+    deep = 'feather://install/' + (/[?&#]/.test(ipaUrl) ? encodeURIComponent(ipaUrl) : ipaUrl);
+  } else {
+    deep = INSTS.find(([k]) => k === inst)[2] + encodeURIComponent(ipaUrl);
+  }
+  // iOS Safari drops raw custom schemes — bounce through an https redirector
+  return REDIRECTOR + encodeURIComponent(deep);
+}
 function dlRow(a) {
   const parts = [];
   const mk = (list, src) => {
@@ -408,13 +429,17 @@ function dlRow(a) {
     }).join('');
     parts.push(`<div class="vsrc">${badge}` +
       `<select data-vsrc="${src}" aria-label="pick a build">${opts}</select>` +
-      `<button class="gbtn sm vget" data-vsrc="${src}">⬇ GET</button></div>`);
+      `<button class="gbtn sm vget" data-vsrc="${src}">⬇ GET</button></div>` +
+      `<div class="vinst"><span class="dim">one-tap install:</span>` +
+      INSTS.map(([k, label]) =>
+        `<button class="gbtn sm vinstbtn" data-vsrc="${src}" data-inst="${k}">${label}</button>`
+      ).join('') + `</div>`);
   };
   Object.keys(a.vh || {}).forEach(src => mk(a.vh[src], src));
   if (!parts.length) return '—';
   return parts.join('') +
     `<div class="dim" style="margin-top:8px">Newest build is pre-selected — open the list to roll back to an older one. ` +
-    `TIPA builds are for TrollStore. The file downloads to your iPhone; open it in Scarlet / AltStore / SideStore / TrollStore to install. ` +
+    `TIPA builds are for TrollStore. Pick a build, then tap your installer above for one-tap install. No installer? ⬇ GET downloads the file — open it in Scarlet manually. ` +
     `Unofficial build — verify the bundle ID and source before installing.</div>`;
 }
 
@@ -438,7 +463,7 @@ function openModal(name, sector, pushHash = true) {
     ${row('APP STORE', storeRow(a))}
     ${row('VERIFICATION', verifyRow(a))}
     ${row('UPDATED', updatedRow(a))}
-    ${row('BUILDS INDEXED', a.n + ' strain' + (a.n === 1 ? '' : 's'))}
+    ${row('BUILDS INDEXED', a.n + ' build' + (a.n === 1 ? '' : 's'))}
     ${a.tweak ? row('TWEAKS', esc(a.tweak)) : ''}
     ${row('BUNDLE IDS', bundles || '—')}
     ${row('UPLOADERS', esc(a.dev || 'Unknown'))}
@@ -458,6 +483,14 @@ function openModal(name, sector, pushHash = true) {
       const sel = mbody.querySelector(`select[data-vsrc="${src}"]`);
       const v = a.vh[src][+sel.value];
       if (v && v[2]) window.open(v[2], '_blank');
+    };
+  });
+  mbody.querySelectorAll('.vinstbtn').forEach(btn => {
+    btn.onclick = () => {
+      const src = btn.dataset.vsrc;
+      const sel = mbody.querySelector(`select[data-vsrc="${src}"]`);
+      const v = a.vh[src][+sel.value];
+      if (v && v[2]) window.location.href = installerLink(btn.dataset.inst, v[2]);
     };
   });
   syncFavUI();

@@ -89,8 +89,86 @@ GENRE_SECTOR = {
     "Travel": "Travel", "Navigation": "Travel",
     "Utilities": "Utilities", "Developer Tools": "Utilities",
     "Reference": "Utilities", "Weather": "Utilities",
+    "Lifestyle": "Lifestyle", "Shopping": "Lifestyle", "Food & Drink": "Lifestyle",
+    "Stickers": "Social",
     "Games": "Games",
 }
+
+# Keyword fallback for apps with no App Store genre (checked in order).
+CATEGORY_KEYWORDS = [
+    ("Utilities", (
+        "patcher", "appstore", "vpn", "proxy", "dns", "adblock", "ad blocker", "jailbreak",
+        "trollstore", "sidestore", "altstore", "scarlet", "feather", "esign",
+        "gbox", "livecontainer", "file manager", "unzip", "calculator",
+        "weather", "alarm clock", "battery", "cleaner", "keyboard",
+        "widget", "shortcuts", "automation", "terminal", "ssh",
+        "screen record", "qr scanner", "compass", "flashlight",
+        "remote control", "bluetooth",
+    )),
+    ("Games", (
+        "emulator", "fut", "game", "gaming", "rpg", "shooter", "puzzle", "arcade", "racing",
+        "tower defense", "roguelike", "platformer", "minecraft", "roblox",
+        "pokemon", "mario", "zelda", "fifa", "call of duty",
+        "fortnite", "grand theft", "chess", "poker", "slots", "casino",
+        "zombie", "ninja", "dragon", "simulator", "tycoon",
+        "sniper", "drift", "kart", "soccer", "basketball",
+        "dungeon", "survival", "war game", "battle royale",
+    )),
+    ("Social", (
+        "whatsapp", "telegram", "instagram", "facebook", "messenger",
+        "twitter", "tiktok", "snapchat", "discord", "reddit", "pinterest",
+        "threads", "dating", "tinder", "bumble", "social network",
+    )),
+    ("Photo & video", (
+        "youtube", "video recorder", "screen recorder", "camera", "photo", "video editor", "picsart", "lightroom", "vsco",
+        "capcut", "netflix", "twitch", "vlc", "media player",
+        "movie", "anime", "film", "photo editor",
+    )),
+    ("Music & video", (
+        "spotify", "mp3", "soundcloud", "shazam", "deezer",
+        "tidal", "piano", "guitar", "drum", "podcast", "radio", "music player",
+    )),
+    ("Health", (
+        "sixpack", "fitness", "workout", "health", "medical", "diet", "calorie",
+        "sleep", "pedometer", "running", "yoga", "gym",
+    )),
+    ("Learning", (
+        "learn", "education", "school", "course", "duolingo", "dictionary",
+        "translate", "study", "exam",
+    )),
+    ("Productivity", (
+        "diagram", "productivity", "todo", "task manager", "calendar", "office",
+        "document", "pdf", "scanner", "password manager", "email",
+        "note",
+    )),
+    ("Travel", (
+        "travel", "flight", "hotel", "navigation", "gps",
+        "transit", "airline", "trip",
+    )),
+    ("Finance", (
+        "bank", "finance", "crypto", "bitcoin", "wallet", "stock",
+        "trading", "budget", "payment",
+    )),
+    ("Lifestyle", (
+        "shopping", "food", "recipe", "cook", "restaurant",
+        "fashion", "wallpaper", "sticker",
+    )),
+]
+_CAT_RX = [(sec, [re.compile(r"\b" + re.escape(k) + r"\b") for k in kws])
+          for sec, kws in CATEGORY_KEYWORDS]
+
+def keyword_sector(low):
+    """Best-guess category from app name + description text. '' if no match."""
+    compact = re.sub(r"\s+", "", low)
+    for (sec, kws), (_, rxs) in zip(CATEGORY_KEYWORDS, _CAT_RX):
+        for kw, rx in zip(kws, rxs):
+            if rx.search(low):
+                return sec
+            # long distinctive keywords also match inside single tokens
+            # (XPatcher, FlowdiaDiagrams) where word boundaries fail
+            if len(kw) >= 6 and kw.replace(" ", "") in compact:
+                return sec
+    return ""
 
 AI_KEYWORDS = ("chatgpt", "gpt-4", "gpt4", "gemini", "midjourney", "copilot",
                "assistant", "llm", "stable diffusion", "dall-e", "dalle",
@@ -400,13 +478,16 @@ def build_db(fetched, seed, old_db):
         it = app_it(gkey, recs)
 
         genre = (it or {}).get("g", "")
-        sector = seedrec.get("sector")
-        if not sector:
-            low = (name + " " + " ".join(texts[:3])).lower()
-            if any(k in low for k in AI_KEYWORDS):
-                sector = "AI"
-            else:
-                sector = GENRE_SECTOR.get(genre, "Other")
+        low = (name + " " + " ".join(texts[:3])).lower()
+        if any(k in low for k in AI_KEYWORDS):
+            sector = "AI"
+        else:
+            sector = GENRE_SECTOR.get((genre or "").strip()) or keyword_sector(low) or "Other"
+        if sector == "Other":
+            # never downgrade a decent historical assignment into the sink
+            old = seedrec.get("sector")
+            if old and old != "Other":
+                sector = old
 
         icon = seedrec.get("icon") or next((r["icon"] for r in recs if r["icon"]), "")
         fb = (it or {}).get("art", "")
