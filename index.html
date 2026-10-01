@@ -559,7 +559,7 @@ function imgFallback(el) {
 /* Boot lines are rebuilt from DB.repos at init so new sources show up. */
 let BOOT_LINES = [
   'UNDEAD BIOS v1.337 — checking systems...',
-  'MEMORY ...... 07734K OK',
+  'MEMORY ...... <span style="display:inline-block;transform:rotate(180deg)">07734</span> OK',
 ];
 function buildBootLines() {
   const lines = BOOT_LINES.slice(0, 2);
