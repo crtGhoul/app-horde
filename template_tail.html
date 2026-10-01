@@ -209,7 +209,7 @@ function filtered() {
     return apps;
   }
   // any query searches the entire horde, not just the current category
-  let apps = q ? Object.values(DB.cats).flat()
+  let apps = (q || tab === 'repo') ? Object.values(DB.cats).flat()
              : tab === 'faves' ? favApps() : DB.cats[tab] || [];
   if (srcFilter !== 'all')
     apps = apps.filter(a => a.src.includes(srcFilter));
@@ -268,7 +268,10 @@ function render() {
   emptyMsg.style.display = apps.length ? 'none' : 'block';
   if (q) {
     sectTitle.innerHTML = '<span class="glitch" data-t="RESULTS">RESULTS</span>';
-    secSub.textContent = '// ' + apps.length + ' matches across all categories';
+    secSub.textContent = '// ' + apps.length + ' matches' +
+      (tab === 'repo' ? ' in this repo' : ' across all categories');
+  } else if (tab === 'repo') {
+    paintRepoHeader(apps.length);
   }
   let i = 0;
   const io = new IntersectionObserver(es => es.forEach(e => {
@@ -521,6 +524,46 @@ function routeHash() {
 }
 addEventListener('hashchange', routeHash);
 
+/* ---------- 8b. Repo view: browse + search inside one repo ---------- */
+function paintRepoHeader(n) {
+  const label = ((DB.srcmeta || {})[srcFilter] || {}).label || srcFilter;
+  sectTitle.style.display = '';
+  secSub.style.display = '';
+  sectTitle.innerHTML = '<span class="glitch" data-t="REPO">REPO</span> ' +
+    '<span style="color:var(--red)">' + esc(label) + '</span>';
+  secSub.innerHTML = '// ' + n.toLocaleString() + ' apps from this repo · ' +
+    '<a href="#" id="clearrepo" style="color:var(--toxic)">clear \u00d7</a>';
+  const cr = document.getElementById('clearrepo');
+  if (cr) cr.onclick = e => { e.preventDefault(); setRepoFilter('all'); };
+}
+function enterRepo(key) {
+  srcFilter = key;
+  document.getElementById('srcf').value = key;
+  tab = 'repo';
+  q = '';
+  const qi = document.getElementById('q');
+  if (qi) qi.value = '';
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('homepanels').style.display = 'none';
+  document.getElementById('guidepanels').style.display = 'none';
+  document.getElementById('toolbar').style.display = '';
+  grid.style.display = 'grid';
+  emptyMsg.style.display = 'none';
+  paintRepoHeader(
+    Object.values(DB.cats).flat().filter(a => (a.src || []).includes(key)).length);
+  render();
+  window.scrollTo(0, 0);
+  try { history.replaceState(null, '', location.pathname + location.search); }
+  catch (e) { /* file:// may refuse; harmless */ }
+}
+function setRepoFilter(key) {
+  srcFilter = key;
+  document.getElementById('srcf').value = key;
+  if (key !== 'all' && (tab === 'home' || tab === 'repo')) enterRepo(key);
+  else if (tab === 'repo') setTab('home');
+  else if (tab !== 'home') render();
+}
+
 /* ---------- 9. Wiring ---------- */
 document.getElementById('q').addEventListener('input', e => {
   q = e.target.value.trim();
@@ -536,10 +579,8 @@ document.getElementById('sort').addEventListener('change', e => {
   sortMode = e.target.value;
   if (tab !== 'home') render();
 });
-document.getElementById('srcf').addEventListener('change', e => {
-  srcFilter = e.target.value;
-  if (tab !== 'home') render();
-});
+document.getElementById('srcf').addEventListener('change', e =>
+  setRepoFilter(e.target.value));
 document.querySelectorAll('.tab').forEach(b =>
   b.onclick = () => setTab(b.dataset.t));
 // [search] tab: jump to the toolbar and focus the search field
@@ -550,6 +591,8 @@ document.getElementById('searchtab').onclick = () => {
 };
 document.querySelectorAll('.tile').forEach(t =>
   t.onclick = () => setTab(t.dataset.t));
+document.querySelectorAll('.rtile').forEach(t =>
+  t.onclick = () => setRepoFilter(t.dataset.repo));
 ['topgrid', 'rategrid'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;

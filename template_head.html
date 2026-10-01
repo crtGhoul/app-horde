@@ -321,6 +321,8 @@ footer .skull{color:var(--blood);font-size:15px}
     </header>
     <h2 class="sec">browse categories</h2>
     {{TILES}}
+    <h2 class="sec">browse repos</h2>
+    {{REPO_TILES}}
     <h2 class="sec">most builds</h2>
     <div class="grid" id="topgrid"></div>
     <h2 class="sec">top rated apps</h2>
@@ -473,7 +475,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
       <option value="rated">Top rated ★</option>
     </select>
     <select id="srcf">
-      <option value="all">All sources</option>
+      <option value="all">All repos</option>
 {{SRC_OPTIONS}}
     </select>
   </div>

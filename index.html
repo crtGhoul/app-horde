@@ -321,6 +321,21 @@ footer .skull{color:var(--blood);font-size:15px}
     </header>
     <h2 class="sec">browse categories</h2>
         <div class="tiles"><div class="tile" data-t="Social"><b>111</b><span>social</span></div><div class="tile" data-t="Photo & video"><b>608</b><span>photo & video</span></div><div class="tile" data-t="Music & video"><b>97</b><span>music & video</span></div><div class="tile" data-t="AI"><b>40</b><span>ai</span></div><div class="tile" data-t="Health"><b>235</b><span>health</span></div><div class="tile" data-t="Learning"><b>119</b><span>learning</span></div><div class="tile" data-t="Productivity"><b>219</b><span>productivity</span></div><div class="tile" data-t="Travel"><b>56</b><span>travel</span></div><div class="tile" data-t="Finance"><b>27</b><span>finance</span></div><div class="tile" data-t="Utilities"><b>363</b><span>utilities</span></div><div class="tile" data-t="Games"><b>1,273</b><span>games</span></div><div class="tile" data-t="Other"><b>724</b><span>other</span></div></div>
+    <h2 class="sec">browse repos</h2>
+        <div class="tiles">
+    <div class="tile rtile" data-repo="alans"><b>3,863</b><span>alan&#x27;s</span></div>
+    <div class="tile rtile" data-repo="apptesters"><b>813</b><span>apptesters</span></div>
+    <div class="tile rtile" data-repo="cypwn"><b>190</b><span>cypwn</span></div>
+    <div class="tile rtile" data-repo="quantum"><b>38</b><span>quantum</span></div>
+    <div class="tile rtile" data-repo="quantumplus"><b>35</b><span>quantum+</span></div>
+    <div class="tile rtile" data-repo="wuxu"><b>13</b><span>wuxu&#x27;s</span></div>
+    <div class="tile rtile" data-repo="sidestore"><b>23</b><span>sidestore</span></div>
+    <div class="tile rtile" data-repo="altstore"><b>3</b><span>altstore</span></div>
+    <div class="tile rtile" data-repo="oatmealdome"><b>2</b><span>oatmealdome</span></div>
+    <div class="tile rtile" data-repo="utm"><b>2</b><span>utm</span></div>
+    <div class="tile rtile" data-repo="ish"><b>1</b><span>ish</span></div>
+    <div class="tile rtile" data-repo="flycast"><b>1</b><span>flycast</span></div>
+    </div>
     <h2 class="sec">most builds</h2>
     <div class="grid" id="topgrid"></div>
     <h2 class="sec">top rated apps</h2>
@@ -485,7 +500,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
       <option value="rated">Top rated ★</option>
     </select>
     <select id="srcf">
-      <option value="all">All sources</option>
+      <option value="all">All repos</option>
       <option value="alans">Alan&#x27;s</option>
       <option value="apptesters">AppTesters</option>
       <option value="cypwn">CyPwn</option>
@@ -741,7 +756,7 @@ function filtered() {
     return apps;
   }
   // any query searches the entire horde, not just the current category
-  let apps = q ? Object.values(DB.cats).flat()
+  let apps = (q || tab === 'repo') ? Object.values(DB.cats).flat()
              : tab === 'faves' ? favApps() : DB.cats[tab] || [];
   if (srcFilter !== 'all')
     apps = apps.filter(a => a.src.includes(srcFilter));
@@ -800,7 +815,10 @@ function render() {
   emptyMsg.style.display = apps.length ? 'none' : 'block';
   if (q) {
     sectTitle.innerHTML = '<span class="glitch" data-t="RESULTS">RESULTS</span>';
-    secSub.textContent = '// ' + apps.length + ' matches across all categories';
+    secSub.textContent = '// ' + apps.length + ' matches' +
+      (tab === 'repo' ? ' in this repo' : ' across all categories');
+  } else if (tab === 'repo') {
+    paintRepoHeader(apps.length);
   }
   let i = 0;
   const io = new IntersectionObserver(es => es.forEach(e => {
@@ -1053,6 +1071,46 @@ function routeHash() {
 }
 addEventListener('hashchange', routeHash);
 
+/* ---------- 8b. Repo view: browse + search inside one repo ---------- */
+function paintRepoHeader(n) {
+  const label = ((DB.srcmeta || {})[srcFilter] || {}).label || srcFilter;
+  sectTitle.style.display = '';
+  secSub.style.display = '';
+  sectTitle.innerHTML = '<span class="glitch" data-t="REPO">REPO</span> ' +
+    '<span style="color:var(--red)">' + esc(label) + '</span>';
+  secSub.innerHTML = '// ' + n.toLocaleString() + ' apps from this repo · ' +
+    '<a href="#" id="clearrepo" style="color:var(--toxic)">clear \u00d7</a>';
+  const cr = document.getElementById('clearrepo');
+  if (cr) cr.onclick = e => { e.preventDefault(); setRepoFilter('all'); };
+}
+function enterRepo(key) {
+  srcFilter = key;
+  document.getElementById('srcf').value = key;
+  tab = 'repo';
+  q = '';
+  const qi = document.getElementById('q');
+  if (qi) qi.value = '';
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('homepanels').style.display = 'none';
+  document.getElementById('guidepanels').style.display = 'none';
+  document.getElementById('toolbar').style.display = '';
+  grid.style.display = 'grid';
+  emptyMsg.style.display = 'none';
+  paintRepoHeader(
+    Object.values(DB.cats).flat().filter(a => (a.src || []).includes(key)).length);
+  render();
+  window.scrollTo(0, 0);
+  try { history.replaceState(null, '', location.pathname + location.search); }
+  catch (e) { /* file:// may refuse; harmless */ }
+}
+function setRepoFilter(key) {
+  srcFilter = key;
+  document.getElementById('srcf').value = key;
+  if (key !== 'all' && (tab === 'home' || tab === 'repo')) enterRepo(key);
+  else if (tab === 'repo') setTab('home');
+  else if (tab !== 'home') render();
+}
+
 /* ---------- 9. Wiring ---------- */
 document.getElementById('q').addEventListener('input', e => {
   q = e.target.value.trim();
@@ -1068,10 +1126,8 @@ document.getElementById('sort').addEventListener('change', e => {
   sortMode = e.target.value;
   if (tab !== 'home') render();
 });
-document.getElementById('srcf').addEventListener('change', e => {
-  srcFilter = e.target.value;
-  if (tab !== 'home') render();
-});
+document.getElementById('srcf').addEventListener('change', e =>
+  setRepoFilter(e.target.value));
 document.querySelectorAll('.tab').forEach(b =>
   b.onclick = () => setTab(b.dataset.t));
 // [search] tab: jump to the toolbar and focus the search field
@@ -1082,6 +1138,8 @@ document.getElementById('searchtab').onclick = () => {
 };
 document.querySelectorAll('.tile').forEach(t =>
   t.onclick = () => setTab(t.dataset.t));
+document.querySelectorAll('.rtile').forEach(t =>
+  t.onclick = () => setRepoFilter(t.dataset.repo));
 ['topgrid', 'rategrid'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;

@@ -681,6 +681,15 @@ def render(db, verified, out_path):
         "{{GUIDE_DISCLAIMER_SRC}}": (f"Every ⬇ GET button hands you a file from one of the "
                                      f"{nsrc} indexed repos listed below"),
         "{{SRC_OPTIONS}}": src_options.rstrip("\n"),
+        "{{REPO_TILES}}": (
+            '    <div class="tiles">\n' + "".join(
+                f'    <div class="tile rtile" data-repo="{k}"><b>'
+                f"{sum(1 for sec in db['cats'].values() for a in sec if k in a['src']):,}</b>"
+                f'<span>{esc_h(SOURCES[k]["short"].lower())}</span></div>\n'
+                for k in db["repos"]
+            ) + '    </div>'
+        ),
+
         "{{FOOTER_SOURCES}}": esc_h(" + ".join(l.lower() for l in labels)),
         "{{DATA_DATE}}": data_date,
     }
