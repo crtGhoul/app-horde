@@ -417,7 +417,14 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <p class="dim">★ = official developer source — straight from the app maker, not a tweak repo.<br>Alan's Gigantic Repo (16,281 builds) · AppTesters IPA Repo (9,334 builds) · CyPwn IPA Library (209 builds) · Quantum Source (38 builds) · Quantum Plus (35 builds) · WuXu's Library++ (13 builds) · ★ SideStore Community (23 builds) · ★ AltStore Official (6 builds) · ★ OatmealDome (2 builds) · ★ UTM (2 builds) · ★ iSH (1 builds) · ★ Flycast (1 builds).</p>
 </div>
 
-<h2 class="sec">4 · install from this site</h2>
+<h2 class="sec">4 · which sources are safe</h2>
+<p class="secsub">// trust-ranked — official dev sources first, big community repos second</p>
+<div class="gbox">
+  <div id="safesrc"></div>
+  <p class="dim" style="margin-top:10px">Rule of thumb: prefer official dev sources, then big community repos — and always read an app's intel panel (bundle-ID match, repo count, version sanity) before installing anything. No list makes sideloading risk-free.</p>
+</div>
+
+<h2 class="sec">5 · install from this site</h2>
 <div class="gbox">
   <ol class="steps">
     <li><b>Find an app</b> — search the horde or browse a sector.</li>
@@ -427,7 +434,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   </ol>
 </div>
 
-<h2 class="sec">5 · survival rules</h2>
+<h2 class="sec">6 · survival rules</h2>
 <div class="gbox rules">
   <p><b>① Use a spare Apple ID</b> for signing — never your main one.</p>
   <p><b>② Free Apple IDs expire every 7 days.</b> Re-open AltStore/SideStore on Wi-Fi to refresh before apps die.</p>
@@ -437,7 +444,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <p><b>⑥ If an app asks for logins it shouldn't need</b>, delete it. When in doubt, check the uploader and the FRESH badge.</p>
 </div>
 
-<h2 class="sec">6 · when things break</h2>
+<h2 class="sec">7 · when things break</h2>
 <p class="secsub">// the errors every beginner hits, and the fix for each</p>
 <div class="dllist">
   <div class="fix"><b>✗ "Unable to Verify App"</b><span>Your certificate was revoked or expired. Re-sign the app: in Scarlet re-import your certificate and reinstall; in AltStore/SideStore open the app and refresh. Free/shared certificates die often — this is normal.</span></div>
@@ -452,7 +459,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <div class="fix"><b>✗ "You hit the 3-app limit"</b><span>Free Apple IDs can only keep 3 sideloaded apps active. Delete one in AltStore/SideStore to make room, or look into LiveContainer to bundle more.</span></div>
 </div>
 
-<h2 class="sec">7 · verify before you install</h2>
+<h2 class="sec">8 · verify before you install</h2>
 <p class="secsub">// every app's intel panel runs these checks for you — here's what they mean, and what to check yourself</p>
 <div class="gbox rules">
   <p><b>① Open the app's intel and read the VERIFICATION row.</b> It automatically checks three things: whether the bundle ID matches a real App Store listing, how many independent repos carry the app, and whether the repo's build version lines up with the App Store's current release.</p>
@@ -1081,6 +1088,7 @@ function copyBtn(btn) {
   }
   // source filter options are baked into the HTML by build.py
   buildBootLines();
+  renderSafeSources();
   document.querySelectorAll('.cpy').forEach(copyBtn);
   document.querySelectorAll('[data-goto]').forEach(el =>
     el.addEventListener('click', e => {
@@ -1092,6 +1100,24 @@ function copyBtn(btn) {
   startRain();
   startRefreshCountdown();
 })();
+
+/* ---------- 11. Safe sources (guide) ---------- */
+function renderSafeSources() {
+  const el = document.getElementById('safesrc');
+  if (!el) return;
+  const meta = DB.srcmeta || {}, repos = DB.repos || {};
+  const rows = Object.keys(repos).map(k => {
+    const m = meta[k] || {};
+    return { label: m.label || k.toUpperCase(), official: !!m.official,
+             entries: (repos[k] || {}).entries || 0 };
+  }).sort((a, b) => ((b.official - a.official) || (b.entries - a.entries)));
+  el.innerHTML = rows.map(r =>
+    `<div class="fix"><b>${r.official ? '\u2605' : '\u25cf'} ${esc(r.label)}</b>` +
+    `<span>${r.official
+      ? 'Official developer source \u2014 the safest tier, run by the app makers themselves.'
+      : 'Large community repo \u2014 widely used, but community-run. Check the app intel before installing.'}` +
+    ` ${r.entries.toLocaleString()} apps indexed.</span></div>`).join('');
+}
 
 /* ---------- 10. Weekly refresh countdown ---------- */
 function startRefreshCountdown() {

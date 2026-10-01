@@ -558,6 +558,7 @@ function copyBtn(btn) {
   }
   // source filter options are baked into the HTML by build.py
   buildBootLines();
+  renderSafeSources();
   document.querySelectorAll('.cpy').forEach(copyBtn);
   document.querySelectorAll('[data-goto]').forEach(el =>
     el.addEventListener('click', e => {
@@ -569,6 +570,24 @@ function copyBtn(btn) {
   startRain();
   startRefreshCountdown();
 })();
+
+/* ---------- 11. Safe sources (guide) ---------- */
+function renderSafeSources() {
+  const el = document.getElementById('safesrc');
+  if (!el) return;
+  const meta = DB.srcmeta || {}, repos = DB.repos || {};
+  const rows = Object.keys(repos).map(k => {
+    const m = meta[k] || {};
+    return { label: m.label || k.toUpperCase(), official: !!m.official,
+             entries: (repos[k] || {}).entries || 0 };
+  }).sort((a, b) => ((b.official - a.official) || (b.entries - a.entries)));
+  el.innerHTML = rows.map(r =>
+    `<div class="fix"><b>${r.official ? '\u2605' : '\u25cf'} ${esc(r.label)}</b>` +
+    `<span>${r.official
+      ? 'Official developer source \u2014 the safest tier, run by the app makers themselves.'
+      : 'Large community repo \u2014 widely used, but community-run. Check the app intel before installing.'}` +
+    ` ${r.entries.toLocaleString()} apps indexed.</span></div>`).join('');
+}
 
 /* ---------- 10. Weekly refresh countdown ---------- */
 function startRefreshCountdown() {
