@@ -161,7 +161,10 @@ function setTab(t, keepHash = false) {
     grid.style.display = 'grid';
     sectTitle.innerHTML = '<span class="glitch" data-t="' + esc(t.toUpperCase()) + '">' +
       esc(t.toUpperCase()) + '</span> <span style="color:var(--red)">CATEGORY</span>';
-    secSub.textContent = '// ' + DB.counts[t] + ' apps listed';
+    secSub.innerHTML = '// ' + DB.counts[t] + ' apps listed · ' +
+      '<a href="#" id="clearcat" style="color:var(--toxic)">clear \u00d7</a>';
+    const cc = document.getElementById('clearcat');
+    if (cc) cc.onclick = e => { e.preventDefault(); setTab('home'); };
     render();
   }
   if (!keepHash) {
