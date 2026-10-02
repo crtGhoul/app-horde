@@ -405,6 +405,7 @@ def itunes_lookup(bundles):
                     "c": int(r.get("userRatingCount") or 0),
                     "g": r.get("primaryGenreName") or "",
                     "v": r.get("version") or "",
+                    "m": r.get("minimumOsVersion") or "",
                     "art": art.replace("100x100bb.jpg", "256x256bb.jpg") if art else "",
                     "d": (r.get("description") or "").strip(),
                 }
@@ -474,18 +475,22 @@ def build_db(fetched, seed, old_db):
             # seeded App Store record predates description capture — backfill it
             for b in bundle_rank(recs)[:2]:
                 need.add(b)
+        elif not (sit or {}).get("m"):
+            # seeded App Store record predates minimum-iOS capture — backfill it
+            for b in bundle_rank(recs)[:2]:
+                need.add(b)
     print(f"  itunes lookups needed: {len(need)} (rest seeded)", flush=True)
     fresh_it = itunes_lookup(need) if need else {}
 
     def app_it(gkey, recs):
         s = seed.get(gkey, {}).get("it")
-        if has_it(s):
+        if has_it(s) and (s or {}).get("m"):
             return s
         for b in bundle_rank(recs):
             it = fresh_it.get(b)
             if has_it(it):
                 return it
-        return None
+        return s if has_it(s) else None
 
     today = date.today()
     apps = []

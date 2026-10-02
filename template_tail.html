@@ -357,7 +357,8 @@ function storeRow(a) {
     return `✓ <b style="color:var(--toxic)">${esc(a.it.name)}</b> — ` +
       `<span style="color:var(--amber)">${stars}</span> · ` +
       `${fmtNum(a.it.c)} ratings · ${esc(a.it.g || 'App Store')}` +
-      (a.it.v ? ` · v${esc(a.it.v)}` : '');
+      (a.it.v ? ` · v${esc(a.it.v)}` : '') +
+      (a.it.m ? ` · <span style="color:var(--toxic)">requires iOS ${esc(a.it.m)}+</span>` : '');
   }
   return '✗ Not found on the App Store — treat with extra suspicion';
 }
