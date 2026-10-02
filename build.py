@@ -684,6 +684,50 @@ def build_db(fetched, seed, old_db):
 
 
 # ------------------------------------------------------------ render -----
+SITE_URL = "https://crtghoul.github.io/app-horde"
+
+
+def write_rss(db):
+    """Static RSS 2.0 feed of the fresh-drops list (builds ≤7 days old)."""
+    from email.utils import formatdate
+    fresh = [a for c in db["cats"].values() for a in c
+             if a.get("upd") is not None and a["upd"] <= 7
+             and not version_suspicious(a)]
+    fresh.sort(key=lambda a: (a["upd"], -a["n"], a["name"].lower()))
+    items = []
+    for a in fresh[:50]:
+        try:
+            pub = formatdate(
+                datetime.strptime(a["updDate"], "%Y-%m-%d").timestamp(),
+                usegmt=True)
+        except Exception:
+            pub = formatdate(usegmt=True)
+        link = f"{SITE_URL}/#app={urllib.parse.quote(a['name'])}"
+        desc = (f"v{a.get('lv', '')} — {a.get('desc', '')[:280]} "
+                f"(via {', '.join(a.get('src', []))})")
+        items.append(
+            "  <item>\n"
+            f"    <title>{esc_h(a['name'])} v{esc_h(a.get('lv', ''))}</title>\n"
+            f"    <link>{link}</link>\n"
+            f"    <guid>{link}</guid>\n"
+            f"    <pubDate>{pub}</pubDate>\n"
+            f"    <description>{esc_h(desc)}</description>\n"
+            "  </item>")
+    rss = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n<channel>\n'
+        f"  <title>app-horde — fresh drops</title>\n"
+        f"  <link>{SITE_URL}/</link>\n"
+        "  <description>Apps with new builds indexed by app-horde in the last "
+        "7 days. Refreshed every monday.</description>\n"
+        f"  <lastBuildDate>{formatdate(usegmt=True)}</lastBuildDate>\n"
+        + "\n".join(items)
+        + "\n</channel>\n</rss>\n")
+    out = os.path.join(HERE, "fresh.xml")
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(rss)
+    print(f"  wrote {out} ({len(items)} items)")
+
+
 def esc_h(s):
     return html.escape(str(s), quote=True)
 
@@ -783,6 +827,7 @@ def main():
     print(f"  unique={db['unique']:,} total builds={db['total']:,} "
           f"verified={verified:,}", flush=True)
     digest = render(db, verified, out)
+    write_rss(db)
     print(f"DONE db_hash={digest}")
 
 

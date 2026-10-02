@@ -114,6 +114,23 @@ h2.sec::before{content:"// "}
 .tile span::before{content:"./";color:#3d5240}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 
+/* ================= fresh drops ================= */
+.rsslink{font-size:11px;letter-spacing:1px;color:var(--amber);border:1px solid var(--amber);
+  padding:2px 8px;text-decoration:none;margin-left:10px;vertical-align:2px}
+.rsslink:hover{background:var(--amber);color:#000}
+#freshlist{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}
+.frow{display:flex;align-items:center;gap:12px;border:1px solid var(--border);
+  background:var(--dim);padding:8px 12px;cursor:pointer;flex-wrap:wrap}
+.frow:hover{border-color:var(--toxic)}
+.frow .fic{width:34px;height:34px;flex:none;border:1px solid var(--border);object-fit:cover}
+.frow .fn{flex:1 1 180px;min-width:0}
+.frow .fn b{color:var(--toxic);font-size:14px}
+.frow .fv{color:var(--muted);font-size:12px;margin-left:8px}
+.frow .fwhen{color:var(--amber);font-size:12px;white-space:nowrap}
+.frow .fsrc{display:flex;gap:4px;flex-wrap:wrap}
+.frow.oldios{opacity:.5}
+#freshlist .fempty{color:var(--muted);font-size:13px;margin:4px 0}
+
 /* ================= toolbar ================= */
 .toolbar{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap;position:sticky;top:58px;
   z-index:50;background:rgba(6,8,6,.95);padding:10px 0}
@@ -324,6 +341,9 @@ footer .skull{color:var(--blood);font-size:15px}
         Proceed at your own risk.</div>
       <div class="ctawrap"><button class="cta" data-goto="guide">☣ NEW HERE? READ THE FIELD MANUAL →</button></div>
     </header>
+    <h2 class="sec">fresh drops<a class="rsslink" href="fresh.xml" title="RSS feed — new builds, refreshed every monday">RSS</a></h2>
+    <p class="secsub" id="freshsub">// …</p>
+    <div id="freshlist"></div>
     <h2 class="sec">browse categories</h2>
     {{TILES}}
     <h2 class="sec">browse repos</h2>

@@ -275,6 +275,47 @@ function cardHTML(a) {
   </div>`;
 }
 
+/* ---------- 7a. Fresh drops ---------- */
+/* Apps with a build updated in the last 7 days, newest first. Suspicious
+   version claims are excluded, same as the other featured grids. */
+function verSuspicious(a) {
+  return !!(a.it && a.it.v && a.lv && cmpVer(a.lv, a.it.v) === 1);
+}
+function freshDrops() {
+  const out = [];
+  for (const apps of Object.values(DB.cats))
+    for (const a of apps) {
+      if (a.upd == null || a.upd > 7) continue;
+      if (verSuspicious(a)) continue;
+      out.push(a);
+    }
+  out.sort((x, y) => (x.upd - y.upd) || (y.n - x.n) || x.name.localeCompare(y.name));
+  return out;
+}
+function freshRowHTML(a) {
+  const icon = a.icon
+    ? `<img class="fic" loading="lazy" decoding="async" src="${esc(a.icon)}" data-fb="${esc(a.fb || '')}" onerror="imgFallback(this)" alt="">`
+    : '';
+  const pills = a.src.map(srcBadge).join('')
+    + (tooNew(a) ? `<span class="src s-noios">⚠ NEEDS iOS ${esc(reqIos(a))}+</span>` : '');
+  return `<div class="frow${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">`
+    + `${icon}<div class="fn"><b>${esc(a.name)}</b><span class="fv">v${esc(a.lv || '?')}</span></div>`
+    + `<span class="fwhen">updated ${esc(daysLabel(a.upd))}</span>`
+    + `<div class="fsrc">${pills}</div></div>`;
+}
+function paintFresh() {
+  const list = document.getElementById('freshlist');
+  const sub = document.getElementById('freshsub');
+  if (!list || !sub) return;
+  const drops = freshDrops();
+  sub.textContent = drops.length
+    ? `// ${drops.length} fresh this week — new builds landed in the last 7 days`
+    : '// no fresh builds this week — check back monday';
+  list.innerHTML = drops.length
+    ? drops.map(freshRowHTML).join('')
+    : '<p class="fempty">no fresh builds this week — check back monday</p>';
+}
+
 let renderToken = 0;
 function render() {
   const apps = filtered();
@@ -642,6 +683,7 @@ function repaintHomeCards() {
     rg.innerHTML = DB.toprated.map(cardHTML).join('');
     rg.querySelectorAll('.card').forEach(c => c.classList.add('vis'));
   }
+  paintFresh();
 }
 const myiosEl = document.getElementById('myios');
 if (myiosEl) {
@@ -679,6 +721,11 @@ document.querySelectorAll('.rtile').forEach(t =>
     if (card) openModal(card.dataset.name, card.dataset.sector);
   });
 });
+const fl = document.getElementById('freshlist');
+if (fl) fl.addEventListener('click', e => {
+  const row = e.target.closest('.frow');
+  if (row) openModal(row.dataset.name, row.dataset.sector);
+});
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
   if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
@@ -708,6 +755,7 @@ function copyBtn(btn) {
     rg.innerHTML = DB.toprated.map(cardHTML).join('');
     rg.querySelectorAll('.card').forEach(c => c.classList.add('vis'));
   }
+  paintFresh();
   // source filter options are baked into the HTML by build.py
   buildBootLines();
   renderSafeSources();

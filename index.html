@@ -114,6 +114,23 @@ h2.sec::before{content:"// "}
 .tile span::before{content:"./";color:#3d5240}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 
+/* ================= fresh drops ================= */
+.rsslink{font-size:11px;letter-spacing:1px;color:var(--amber);border:1px solid var(--amber);
+  padding:2px 8px;text-decoration:none;margin-left:10px;vertical-align:2px}
+.rsslink:hover{background:var(--amber);color:#000}
+#freshlist{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}
+.frow{display:flex;align-items:center;gap:12px;border:1px solid var(--border);
+  background:var(--dim);padding:8px 12px;cursor:pointer;flex-wrap:wrap}
+.frow:hover{border-color:var(--toxic)}
+.frow .fic{width:34px;height:34px;flex:none;border:1px solid var(--border);object-fit:cover}
+.frow .fn{flex:1 1 180px;min-width:0}
+.frow .fn b{color:var(--toxic);font-size:14px}
+.frow .fv{color:var(--muted);font-size:12px;margin-left:8px}
+.frow .fwhen{color:var(--amber);font-size:12px;white-space:nowrap}
+.frow .fsrc{display:flex;gap:4px;flex-wrap:wrap}
+.frow.oldios{opacity:.5}
+#freshlist .fempty{color:var(--muted);font-size:13px;margin:4px 0}
+
 /* ================= toolbar ================= */
 .toolbar{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap;position:sticky;top:58px;
   z-index:50;background:rgba(6,8,6,.95);padding:10px 0}
@@ -324,6 +341,9 @@ footer .skull{color:var(--blood);font-size:15px}
         Proceed at your own risk.</div>
       <div class="ctawrap"><button class="cta" data-goto="guide">☣ NEW HERE? READ THE FIELD MANUAL →</button></div>
     </header>
+    <h2 class="sec">fresh drops<a class="rsslink" href="fresh.xml" title="RSS feed — new builds, refreshed every monday">RSS</a></h2>
+    <p class="secsub" id="freshsub">// …</p>
+    <div id="freshlist"></div>
     <h2 class="sec">browse categories</h2>
         <div class="tiles"><div class="tile" data-t="Social"><b>111</b><span>social</span></div><div class="tile" data-t="Photo & video"><b>607</b><span>photo & video</span></div><div class="tile" data-t="Music & video"><b>97</b><span>music & video</span></div><div class="tile" data-t="AI"><b>40</b><span>ai</span></div><div class="tile" data-t="Health"><b>237</b><span>health</span></div><div class="tile" data-t="Learning"><b>120</b><span>learning</span></div><div class="tile" data-t="Productivity"><b>221</b><span>productivity</span></div><div class="tile" data-t="Travel"><b>56</b><span>travel</span></div><div class="tile" data-t="Finance"><b>27</b><span>finance</span></div><div class="tile" data-t="Utilities"><b>363</b><span>utilities</span></div><div class="tile" data-t="Games"><b>1,270</b><span>games</span></div><div class="tile" data-t="Other"><b>723</b><span>other</span></div></div>
     <h2 class="sec">browse repos</h2>
@@ -829,6 +849,47 @@ function cardHTML(a) {
   </div>`;
 }
 
+/* ---------- 7a. Fresh drops ---------- */
+/* Apps with a build updated in the last 7 days, newest first. Suspicious
+   version claims are excluded, same as the other featured grids. */
+function verSuspicious(a) {
+  return !!(a.it && a.it.v && a.lv && cmpVer(a.lv, a.it.v) === 1);
+}
+function freshDrops() {
+  const out = [];
+  for (const apps of Object.values(DB.cats))
+    for (const a of apps) {
+      if (a.upd == null || a.upd > 7) continue;
+      if (verSuspicious(a)) continue;
+      out.push(a);
+    }
+  out.sort((x, y) => (x.upd - y.upd) || (y.n - x.n) || x.name.localeCompare(y.name));
+  return out;
+}
+function freshRowHTML(a) {
+  const icon = a.icon
+    ? `<img class="fic" loading="lazy" decoding="async" src="${esc(a.icon)}" data-fb="${esc(a.fb || '')}" onerror="imgFallback(this)" alt="">`
+    : '';
+  const pills = a.src.map(srcBadge).join('')
+    + (tooNew(a) ? `<span class="src s-noios">⚠ NEEDS iOS ${esc(reqIos(a))}+</span>` : '');
+  return `<div class="frow${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">`
+    + `${icon}<div class="fn"><b>${esc(a.name)}</b><span class="fv">v${esc(a.lv || '?')}</span></div>`
+    + `<span class="fwhen">updated ${esc(daysLabel(a.upd))}</span>`
+    + `<div class="fsrc">${pills}</div></div>`;
+}
+function paintFresh() {
+  const list = document.getElementById('freshlist');
+  const sub = document.getElementById('freshsub');
+  if (!list || !sub) return;
+  const drops = freshDrops();
+  sub.textContent = drops.length
+    ? `// ${drops.length} fresh this week — new builds landed in the last 7 days`
+    : '// no fresh builds this week — check back monday';
+  list.innerHTML = drops.length
+    ? drops.map(freshRowHTML).join('')
+    : '<p class="fempty">no fresh builds this week — check back monday</p>';
+}
+
 let renderToken = 0;
 function render() {
   const apps = filtered();
@@ -1196,6 +1257,7 @@ function repaintHomeCards() {
     rg.innerHTML = DB.toprated.map(cardHTML).join('');
     rg.querySelectorAll('.card').forEach(c => c.classList.add('vis'));
   }
+  paintFresh();
 }
 const myiosEl = document.getElementById('myios');
 if (myiosEl) {
@@ -1233,6 +1295,11 @@ document.querySelectorAll('.rtile').forEach(t =>
     if (card) openModal(card.dataset.name, card.dataset.sector);
   });
 });
+const fl = document.getElementById('freshlist');
+if (fl) fl.addEventListener('click', e => {
+  const row = e.target.closest('.frow');
+  if (row) openModal(row.dataset.name, row.dataset.sector);
+});
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
   if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
@@ -1262,6 +1329,7 @@ function copyBtn(btn) {
     rg.innerHTML = DB.toprated.map(cardHTML).join('');
     rg.querySelectorAll('.card').forEach(c => c.classList.add('vis'));
   }
+  paintFresh();
   // source filter options are baked into the HTML by build.py
   buildBootLines();
   renderSafeSources();

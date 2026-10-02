@@ -79,7 +79,7 @@ def main():
     print("sanity checks passed", flush=True)
 
     # 3. push via git-database API (same route as the manual pushes)
-    files = ["index.html", "build.py", "template_head.html",
+    files = ["index.html", "fresh.xml", "build.py", "template_head.html",
              "template_tail.html", "weekly-refresh.py", "vt-scan.py",
              "vt_cache.json"]
     parent = api("GET", f"/repos/{REPO}/git/ref/heads/main")["object"]["sha"]
