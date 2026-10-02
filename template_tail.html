@@ -423,6 +423,25 @@ function verifyRow(a) {
   });
   return bits.join('<br>');
 }
+/* VirusTotal verdict for the app's newest build URL, scanned by the weekly
+   refresh. v = {m: malicious, s: suspicious, t: total engines, d: date}. */
+function vtRow(a) {
+  const ok = 'color:var(--toxic)', warn = 'color:var(--amber)',
+        bad = 'color:var(--blood)', dim = 'color:var(--muted)';
+  const v = a.vt;
+  if (!v) return `<span style="${dim}">not scanned yet</span>`;
+  const t = v.t || 0, m = v.m || 0, s = v.s || 0;
+  const when = v.d ? ' · scanned ' + esc(vtDate(v.d)) : '';
+  if (m > 0) return `<span style="${bad}">☠ ${m}/${t} engines flagged this build as malicious${when} — do not install</span>`;
+  if (s > 0) return `<span style="${warn}">⚠ ${s}/${t} engines suspicious, none confirmed malicious${when}</span>`;
+  return `<span style="${ok}">✓ 0/${t} engines flagged${when}</span>`;
+}
+function vtDate(iso) {
+  const M = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun',
+             '07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
+  const p = String(iso || '').split('-');
+  return p.length >= 2 ? (M[p[1]] || p[1]) + ' ' + p[0] : String(iso || '');
+}
 function updatedRow(a) {
   return a.upd != null
     ? `${esc(a.updDate)} · <b style="color:var(--toxic)">${daysLabel(a.upd)}</b>`
@@ -494,6 +513,7 @@ function openModal(name, sector, pushHash = true) {
     ${row('APP STORE', storeRow(a))}
     ${shotsRow(a) ? row('SCREENSHOTS', shotsRow(a)) : ''}
     ${row('VERIFICATION', verifyRow(a))}
+    ${row('VIRUSTOTAL', vtRow(a))}
     ${row('UPDATED', updatedRow(a))}
     ${row('BUILDS INDEXED', a.n + ' build' + (a.n === 1 ? '' : 's'))}
     ${a.tweak ? row('TWEAKS', esc(a.tweak)) : ''}

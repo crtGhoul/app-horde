@@ -382,6 +382,48 @@ def load_seed(path):
     return seed, db
 
 
+# ------------------------------------------------------------ vt cache ----
+def newest_dl_url(a):
+    """Newest build download URL for an app DB record, by build date.
+
+    Shared with vt-scan.py — both must resolve the same URL per app or the
+    cache lookup misses.
+    """
+    best = ("", "")
+    for lst in (a.get("vh") or {}).values():
+        if lst and len(lst[0]) > 2 and lst[0][2]:
+            cand = (lst[0][1] or "", lst[0][2])
+            if cand > best:
+                best = cand
+    if best[1]:
+        return best[1]
+    for u in (a.get("dl") or {}).values():
+        if u:
+            return u
+    return ""
+
+
+def load_vt_cache():
+    """VirusTotal verdict cache {download_url: {...}}, or {} if absent."""
+    p = os.path.join(HERE, "vt_cache.json")
+    try:
+        d = json.load(open(p, encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def vt_verdict(vt_cache, a):
+    """Compact vt {m,s,t,d} for an app record, or None when unscored."""
+    e = vt_cache.get(newest_dl_url(a)) or {}
+    if e.get("status") != "scored":
+        return None
+    return {"m": int(e.get("malicious") or 0),
+            "s": int(e.get("suspicious") or 0),
+            "t": int(e.get("total") or 0),
+            "d": str(e.get("scanned_date") or "")}
+
+
 # ------------------------------------------------------------ itunes -------
 def itunes_lookup(bundles):
     """Batch lookup bundle IDs via Apple's lookup API. Returns {bundle: info}."""
@@ -464,6 +506,9 @@ def build_db(fetched, seed, old_db):
             groups[norm_name(rec["name"])].append(rec)
 
     print(f"  grouped into {len(groups)} apps", flush=True)
+
+    vt_cache = load_vt_cache()
+    print(f"  vt cache: {len(vt_cache):,} urls", flush=True)
 
     # which bundles need fresh App Store lookups? (seed is name-keyed)
     need = set()
@@ -590,7 +635,7 @@ def build_db(fetched, seed, old_db):
                 bits.append("community build")
             desc = " — ".join(bits) + f" · via {', '.join(SOURCES[s]['short'] for s in srcs)}"
 
-        apps.append({
+        rec = {
             "name": name, "desc": desc, "tweak": tweak,
             "bundle": bundles,
             "n": n, "nA": per.get("alans", 0), "nT": per.get("apptesters", 0),
@@ -599,7 +644,11 @@ def build_db(fetched, seed, old_db):
             "upd": upd, "updDate": upd_date, "lv": latest["version"],
             "variants": variants, "dl": dl, "vh": vh,
             "minos": minos, "risk": risk,
-        })
+        }
+        vt = vt_verdict(vt_cache, rec)
+        if vt:
+            rec["vt"] = vt
+        apps.append(rec)
 
     apps.sort(key=lambda a: (-a["n"], a["name"].lower()))
     cats = {c: [] for c in CATS}
