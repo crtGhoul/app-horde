@@ -121,6 +121,11 @@ h2.sec::before{content:"// "}
   padding:11px 14px;font-size:13.5px;font-family:inherit}
 .toolbar input{flex:1;min-width:200px}
 .toolbar input::placeholder{color:#33473a}
+#myios{flex:0 1 118px;min-width:0}
+.card.oldios{opacity:.5}
+.src.s-noios{border-color:var(--blood);color:var(--blood)}
+.shots{display:flex;gap:8px;overflow-x:auto;padding:6px 2px}
+.shots img{height:132px;border-radius:8px;border:1px solid var(--border);flex:0 0 auto}
 .toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--toxic);
   box-shadow:0 0 10px rgba(57,255,20,.35)}
 
@@ -478,6 +483,8 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
       <option value="all">All repos</option>
 {{SRC_OPTIONS}}
     </select>
+    <input id="myios" inputmode="decimal" autocomplete="off" spellcheck="false"
+      placeholder="my iOS e.g. 17.4" title="enter your iOS version — apps that need newer get flagged" aria-label="my iOS version">
   </div>
   <div class="grid" id="grid" style="display:none"></div>
   <div class="empty" id="empty" style="display:none">☠ NO APPS MATCH THIS QUERY</div>

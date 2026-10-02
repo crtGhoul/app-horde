@@ -123,6 +123,17 @@ const sectTitle = document.getElementById('sectitle');
 const secSub = document.getElementById('secsub');
 let tab = 'home', q = '', sortMode = 'alpha', srcFilter = 'all';
 
+/* ---------- 1b. "my iOS" filter ---------- */
+/* Apple-reported minimum iOS per app lives in a.it.m. Repo-declared minos is
+   ignored: every repo stamps exactly "14.0", a placeholder, not real data. */
+let myIos = '';
+try { myIos = localStorage.getItem('ah_myios') || ''; } catch (e) {}
+function reqIos(a) { return (a.it && a.it.m) || ''; }
+function tooNew(a) {
+  const m = reqIos(a);
+  return !!(myIos && m && cmpVer(m, myIos) === 1);
+}
+
 function setTab(t, keepHash = false) {
   tab = t;
   q = '';
@@ -250,10 +261,11 @@ function cardHTML(a) {
     ? `<span class="pill rate">★ ${a.it.r.toFixed(1)}</span>` : '';
   const pills = a.src.map(srcBadge).join('')
     + (hasOfficial(a) ? '<span class="src s-official">★ OFFICIAL DEV</span>' : '')
-    + ((a.upd != null && a.upd <= 30) ? '<span class="src s-fresh">FRESH</span>' : '');
+    + ((a.upd != null && a.upd <= 30) ? '<span class="src s-fresh">FRESH</span>' : '')
+    + (tooNew(a) ? `<span class="src s-noios">⚠ NEEDS iOS ${esc(reqIos(a))}+</span>` : '');
   const tweak = a.tweak ? `<div class="tp">${esc(a.tweak)}</div>` : '';
   const fav = favs.has(a.name);
-  return `<div class="card" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
+  return `<div class="card${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
     <div class="badge">${a.n} BUILDS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
     <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" title="save to favorites">${fav ? '★' : '☆'}</button></div></div>
     <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
@@ -351,14 +363,26 @@ function srcRows(a) {
     return srcBadge(s) + (n != null ? ` ${n} build${n === 1 ? '' : 's'}` : '') + off;
   }).join('<br>');
 }
+function reqIosRow(a) {
+  let s = 'iOS ' + esc(reqIos(a)) + '+';
+  if (tooNew(a))
+    s += ` — <span style="color:var(--blood)">won't run on your iOS ${esc(myIos)}</span>`;
+  return s;
+}
+function shotsRow(a) {
+  const ss = (a.it && a.it.ss) || [];
+  if (!ss.length) return '';
+  return `<div class="shots">` + ss.map(u =>
+    `<a href="${esc(u)}" target="_blank" rel="noopener"><img loading="lazy" decoding="async" src="${esc(u)}" alt="App Store screenshot"></a>`
+  ).join('') + `</div>`;
+}
 function storeRow(a) {
   if (a.it) {
     const stars = '★ ' + a.it.r.toFixed(1);
     return `✓ <b style="color:var(--toxic)">${esc(a.it.name)}</b> — ` +
       `<span style="color:var(--amber)">${stars}</span> · ` +
       `${fmtNum(a.it.c)} ratings · ${esc(a.it.g || 'App Store')}` +
-      (a.it.v ? ` · v${esc(a.it.v)}` : '') +
-      (a.it.m ? ` · <span style="color:var(--toxic)">requires iOS ${esc(a.it.m)}+</span>` : '');
+      (a.it.v ? ` · v${esc(a.it.v)}` : '');
   }
   return '✗ Not found on the App Store — treat with extra suspicion';
 }
@@ -466,8 +490,9 @@ function openModal(name, sector, pushHash = true) {
     <div class="msec">${esc(sector)} CATEGORY</div>
     ${row('SOURCES', srcRows(a))}
     ${row('DOWNLOAD', dlRow(a))}
-    ${a.minos ? row('REQUIRES', 'iOS ' + esc(a.minos) + '+') : ''}
+    ${reqIos(a) ? row('REQUIRES', reqIosRow(a)) : ''}
     ${row('APP STORE', storeRow(a))}
+    ${shotsRow(a) ? row('SCREENSHOTS', shotsRow(a)) : ''}
     ${row('VERIFICATION', verifyRow(a))}
     ${row('UPDATED', updatedRow(a))}
     ${row('BUILDS INDEXED', a.n + ' build' + (a.n === 1 ? '' : 's'))}
@@ -585,6 +610,33 @@ document.getElementById('sort').addEventListener('change', e => {
 });
 document.getElementById('srcf').addEventListener('change', e =>
   setRepoFilter(e.target.value));
+/* "my iOS" filter: flag apps whose App Store minimum exceeds the user's version */
+function repaintHomeCards() {
+  const tg = document.getElementById('topgrid');
+  if (tg && DB.top) {
+    tg.innerHTML = DB.top.map(cardHTML).join('');
+    tg.querySelectorAll('.card').forEach(c => c.classList.add('vis'));
+  }
+  const rg = document.getElementById('rategrid');
+  if (rg && DB.toprated) {
+    rg.innerHTML = DB.toprated.map(cardHTML).join('');
+    rg.querySelectorAll('.card').forEach(c => c.classList.add('vis'));
+  }
+}
+const myiosEl = document.getElementById('myios');
+if (myiosEl) {
+  if (myIos) myiosEl.value = myIos;
+  myiosEl.addEventListener('input', e => {
+    const v = e.target.value.trim();
+    if (v !== '' && !/^\d+(\.\d+){0,2}$/.test(v)) return; // ignore invalid
+    myIos = v;
+    try {
+      if (v) localStorage.setItem('ah_myios', v);
+      else localStorage.removeItem('ah_myios');
+    } catch (err) { /* private mode; harmless */ }
+    if (tab === 'home') repaintHomeCards(); else render();
+  });
+}
 document.querySelectorAll('.tab').forEach(b =>
   b.onclick = () => setTab(b.dataset.t));
 // [search] tab: jump to the toolbar and focus the search field
