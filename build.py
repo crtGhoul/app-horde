@@ -50,9 +50,9 @@ SOURCES = {
     "wuxu":        dict(label="WuXu's Library++", short="WuXu's",
                         url="https://wuxu1.github.io/wuxu-complete-plus.json",
                         cls="s-wuxu", official=False),
-    "starfiles":   dict(label="Starfiles", short="Starfiles",
-                        url="https://repo.starfiles.co/public?gbox",
-                        cls="s-apt", official=False),
+#   "starfiles":   dict(label="Starfiles", short="Starfiles",
+#                       url="https://repo.starfiles.co/public?gbox",
+#                       cls="s-apt", official=False),
     "sidestore":   dict(label="SideStore Community", short="SideStore",
                         url="https://community-apps.sidestore.io/sidecommunity.json",
                         cls="s-side", official=True),
@@ -232,23 +232,39 @@ def fetch_json(url, timeout=60):
 
 def load_sources(offline):
     fetched = {}
+    os.makedirs(SOURCES_DIR, exist_ok=True)
     for key, meta in SOURCES.items():
         snap = os.path.join(SOURCES_DIR, key + ".json")
-        try:
-            if offline and os.path.exists(snap):
-                data = json.load(open(snap, encoding="utf-8"))
+        data = None
+        if offline:
+            if os.path.exists(snap):
+                try:
+                    data = json.load(open(snap, encoding="utf-8"))
+                except Exception as e:
+                    print(f"  ! {key}: snapshot corrupt ({e}) — skipped", flush=True)
             else:
+                print(f"  ! {key}: offline requested but snapshot missing — skipped", flush=True)
+        else:
+            try:
                 data = fetch_json(meta["url"])
-                os.makedirs(SOURCES_DIR, exist_ok=True)
-                json.dump(data, open(snap, "w", encoding="utf-8"))
-            apps = data.get("apps") if isinstance(data, dict) else None
-            if not isinstance(apps, list):
-                print(f"  ! {key}: no parseable apps list — skipped", flush=True)
-                continue
-            fetched[key] = (meta, apps)
-            print(f"  + {key}: {len(apps)} entries", flush=True)
-        except Exception as e:
-            print(f"  ! {key}: fetch failed ({e}) — skipped", flush=True)
+                tmp_snap = snap + ".tmp"
+                with open(tmp_snap, "w", encoding="utf-8") as f:
+                    json.dump(data, f)
+                os.replace(tmp_snap, snap)
+            except Exception as e:
+                print(f"  ! {key}: fetch failed ({e})", flush=True)
+                if os.path.exists(snap):
+                    try:
+                        data = json.load(open(snap, encoding="utf-8"))
+                        print(f"    -> fell back to existing snapshot {snap}", flush=True)
+                    except Exception:
+                        pass
+        apps = data.get("apps") if isinstance(data, dict) else None
+        if not isinstance(apps, list):
+            print(f"  ! {key}: no parseable apps list — skipped", flush=True)
+            continue
+        fetched[key] = (meta, apps)
+        print(f"  + {key}: {len(apps)} entries", flush=True)
     return fetched
 
 
@@ -298,8 +314,6 @@ def iter_builds(key, meta, apps):
         icon = str(a.get("iconURL") or a.get("icon") or "").strip()
         base_text = clean_text(a.get("subtitle"), a.get("localizedDescription"))
         base = dict(name=name, bundle=bundle, dev=dev, icon=icon,
-                    size=int(str(a.get("size") or 0).strip() or 0)
-                    if str(a.get("size") or "").strip().isdigit() else 0,
                     minos=str(a.get("minOSVersion") or "").strip())
 
         versions = []
@@ -434,27 +448,39 @@ def itunes_lookup(bundles):
         url = ("https://itunes.apple.com/lookup?bundleId=" +
                ",".join(urllib.request.quote(b, safe="") for b in batch) +
                "&entity=software&limit=200")
-        try:
-            data = fetch_json(url, timeout=30)
-            for r in data.get("results", []):
-                b = r.get("bundleId")
-                if not b:
+        for attempt in range(3):
+            try:
+                data = fetch_json(url, timeout=30)
+                for r in data.get("results", []):
+                    b = r.get("bundleId")
+                    if not b:
+                        continue
+                    art = r.get("artworkUrl100") or ""
+                    out[b] = {
+                        "name": r.get("trackName") or "",
+                        "r": round(float(r.get("averageUserRating") or 0), 5),
+                        "c": int(r.get("userRatingCount") or 0),
+                        "g": r.get("primaryGenreName") or "",
+                        "v": r.get("version") or "",
+                        "m": r.get("minimumOsVersion") or "",
+                        "ss": (r.get("screenshotUrls") or [])[:3],
+                        "art": art.replace("100x100bb.jpg", "256x256bb.jpg") if art else "",
+                        "d": (r.get("description") or "").strip(),
+                    }
+                break
+            except urllib.error.HTTPError as e:
+                if e.code in (429, 503) and attempt < 2:
+                    wait = 2.0 ** (attempt + 1)
+                    print(f"  ! itunes throttled ({e.code}), backing off {wait}s...", flush=True)
+                    time.sleep(wait)
                     continue
-                art = r.get("artworkUrl100") or ""
-                out[b] = {
-                    "name": r.get("trackName") or "",
-                    "r": round(float(r.get("averageUserRating") or 0), 5),
-                    "c": int(r.get("userRatingCount") or 0),
-                    "g": r.get("primaryGenreName") or "",
-                    "v": r.get("version") or "",
-                    "m": r.get("minimumOsVersion") or "",
-                    "ss": (r.get("screenshotUrls") or [])[:3],
-                    "art": art.replace("100x100bb.jpg", "256x256bb.jpg") if art else "",
-                    "d": (r.get("description") or "").strip(),
-                }
-        except Exception as e:
-            print(f"  ! itunes batch failed: {e}", flush=True)
-        time.sleep(1.0)
+                print(f"  ! itunes batch failed: {e}", flush=True)
+                break
+            except Exception as e:
+                print(f"  ! itunes batch failed: {e}", flush=True)
+                break
+        if i + 50 < len(bundles):
+            time.sleep(1.5)
     return out
 
 
@@ -486,8 +512,8 @@ def extract_tweak(texts):
 def bundle_rank(recs):
     """Distinct bundle ids, most common valid ones first."""
     cnt = Counter(r["bundle"] for r in recs if r["bundle"])
-    valid = sorted([b for b in cnt if valid_bundle(b)], key=lambda b: -cnt[b])
-    junk = sorted([b for b in cnt if not valid_bundle(b)], key=lambda b: -cnt[b])
+    valid = sorted([b for b in cnt if valid_bundle(b)], key=lambda b: (-cnt[b], b))
+    junk = sorted([b for b in cnt if not valid_bundle(b)], key=lambda b: (-cnt[b], b))
     return valid + junk
 
 
@@ -495,7 +521,7 @@ def has_it(it):
     return bool(it and it.get("name"))
 
 
-def build_db(fetched, seed, old_db):
+def build_db(fetched, seed, old_db, offline=False):
     # Group by normalized app NAME (tweaked builds reuse junk/placeholder bundle
     # ids like com.karbinstoree across unrelated apps; the name is the stable
     # identity). All distinct bundle ids are collected into the bundle list.
@@ -513,22 +539,18 @@ def build_db(fetched, seed, old_db):
     # which bundles need fresh App Store lookups? (seed is name-keyed)
     need = set()
     for gkey, recs in groups.items():
-        sit = seed.get(gkey, {}).get("it")
-        if not has_it(sit):
+        seedrec = seed.get(gkey)
+        if seedrec is not None:
+            sit = seedrec.get("it")
+            if sit and ("d" not in sit or "m" not in sit or "ss" not in sit):
+                for b in bundle_rank(recs)[:2]:
+                    need.add(b)
+        else:
             for b in bundle_rank(recs):
                 need.add(b)
-        elif not (sit or {}).get("d"):
-            # seeded App Store record predates description capture — backfill it
-            for b in bundle_rank(recs)[:2]:
-                need.add(b)
-        elif "m" not in (sit or {}) or "ss" not in (sit or {}):
-            # seeded App Store record predates minimum-iOS / screenshot
-            # capture — backfill it (key-presence check: empty lists are
-            # valid results and must not trigger endless re-backfills)
-            for b in bundle_rank(recs)[:2]:
-                need.add(b)
+
     print(f"  itunes lookups needed: {len(need)} (rest seeded)", flush=True)
-    fresh_it = itunes_lookup(need) if need else {}
+    fresh_it = itunes_lookup(need) if (need and not offline) else {}
 
     def app_it(gkey, recs):
         s = seed.get(gkey, {}).get("it")
@@ -798,7 +820,7 @@ def render(db, verified, out_path):
         assert k in head, f"placeholder {k} missing from template"
         head = head.replace(k, v)
 
-    db_json = json.dumps(db, ensure_ascii=True)
+    db_json = json.dumps(db, ensure_ascii=True, sort_keys=True)
     digest = hashlib.sha256(db_json.encode("utf-8")).hexdigest()[:16]
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(head)
@@ -823,7 +845,7 @@ def main():
     print("seeding from previous build…", flush=True)
     seed, old_db = load_seed(os.path.join(HERE, "index.html"))
     print("assembling DB…", flush=True)
-    db, verified = build_db(fetched, seed, old_db)
+    db, verified = build_db(fetched, seed, old_db, offline=offline)
     print(f"  unique={db['unique']:,} total builds={db['total']:,} "
           f"verified={verified:,}", flush=True)
     digest = render(db, verified, out)

@@ -10,9 +10,22 @@ name: Monday refresh
 
 on:
   schedule:
-    # 09:00 UTC every Monday (~3am CT / ~4am ET)
-    - cron: '0 9 * * 1'
-  workflow_dispatch: {}
+    # 09:17 UTC every Monday (~3:17am CT / ~4:17am ET) — off-minute avoids top-of-hour runner congestion
+    - cron: '17 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      force_commit:
+        description: 'Force commit and push even if no content diff'
+        type: boolean
+        default: false
+      offline:
+        description: 'Run offline using cached source snapshots (testing)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: monday-refresh
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -21,23 +34,103 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Rebuild index
-        run: python3 build.py
+      - name: Cache source snapshots
+        uses: actions/cache@v4
+        with:
+          path: sources/
+          key: sources-cache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            sources-cache-${{ runner.os }}-
 
-      - name: Commit index.html if it changed
+      - name: Rebuild index
+        id: build
         run: |
-          git config user.name "app-horde refresh bot"
-          git config user.email "app-horde-refresh@users.noreply.github.com"
-          if git diff --quiet index.html; then
-            echo "no changes — nothing to commit"
-          else
-            git add index.html
-            git commit -m "weekly index refresh ($(date -u +%F))"
-            git push
+          ARGS=""
+          if [ "${{ inputs.offline }}" = "true" ]; then
+            ARGS="--offline"
           fi
+          python3 build.py $ARGS | tee build.log
+          DB_HASH=$(grep -oE "DONE db_hash=[a-f0-9]+" build.log | cut -d'=' -f2 || echo "unknown")
+          echo "db_hash=${DB_HASH}" >> "$GITHUB_OUTPUT"
+
+      - name: Sanity checks & data validation
+        run: |
+          # 1. Size check: index.html must be >5MB (prevents committing empty/truncated file if sources fail)
+          FILE_SIZE=$(stat -c%s index.html 2>/dev/null || stat -f%z index.html)
+          echo "Generated index.html size: $FILE_SIZE bytes"
+          if [ "$FILE_SIZE" -lt 5000000 ]; then
+            echo "::error::index.html is suspiciously small (<5MB), aborting push to prevent data loss!"
+            exit 1
+          fi
+
+          # 2. Hero line check: verify app count was populated
+          if ! grep -qE "[0-9]+(,[0-9]+)* apps indexed" index.html; then
+            echo "::error::Hero line placeholder missing or malformed in index.html!"
+            exit 1
+          fi
+
+          # 3. DB structure check
+          if ! grep -q "const DB = " index.html; then
+            echo "::error::Embedded const DB structure missing from index.html!"
+            exit 1
+          fi
+
+          # 4. Embedded JS syntax validation via Node.js
+          python3 -c '
+          import re, subprocess, sys
+          s = open("index.html", encoding="utf-8").read()
+          js = re.findall(r"<script>(.*?)</script>", s, re.S)
+          if not js:
+              sys.exit("No script tag found in index.html")
+          with open("/tmp/index-check.js", "w", encoding="utf-8") as f:
+              f.write(js[0])
+          rc = subprocess.run(["node", "--check", "/tmp/index-check.js"]).returncode
+          if rc != 0:
+              sys.exit("Embedded JS syntax validation failed")
+          '
+          echo "Sanity checks passed successfully."
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "### Monday Refresh Build Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Execution Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Trigger**: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "index.html" ]; then
+            SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $(stat -c%s index.html 2>/dev/null || echo 0)/1048576}")
+            echo "- **Index Size**: ${SIZE_MB} MB" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **DB Hash**: \`${{ steps.build.outputs.db_hash }}\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Commit and push changes
+        env:
+          DB_HASH: ${{ steps.build.outputs.db_hash }}
+          FORCE_COMMIT: ${{ inputs.force_commit }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet index.html fresh.xml && [ "$FORCE_COMMIT" != "true" ]; then
+            echo "No changes detected in index.html or fresh.xml — skipping commit."
+          else
+            git add index.html fresh.xml
+            git commit -m "weekly index refresh ($(date -u +%F)) [db:${DB_HASH:-unknown}]"
+            git pull --rebase origin main || true
+            git push
+            echo "Successfully pushed updated index.html and fresh.xml."
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Monday Refresh failed! The existing index.html on main was kept intact."

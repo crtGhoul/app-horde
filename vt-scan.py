@@ -29,6 +29,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import date
 
@@ -36,26 +37,76 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from build import split_db, newest_dl_url  # noqa: E402  (no side effects on import)
 
-VT_CLI = "/home/hatch/workspace/skills/virustotal/bin/vt.py"
+VT_CLI = os.environ.get("VT_CLI", "/home/hatch/workspace/skills/virustotal/bin/vt.py")
 CACHE_PATH = os.path.join(HERE, "vt_cache.json")
 DB_PATH = os.path.join(HERE, "index.html")
 SLEEP_SECS = 16          # >=16s between CLI invocations (4 req/min limit)
 MAX_UNSCANNED_RETRY = 20  # per monday run
 
+_LAST_REQUEST_TIME = 0.0
+
+
+def polite_sleep(min_interval=SLEEP_SECS):
+    global _LAST_REQUEST_TIME
+    now = time.monotonic()
+    elapsed = now - _LAST_REQUEST_TIME
+    if elapsed < min_interval:
+        time.sleep(min_interval - elapsed)
+    _LAST_REQUEST_TIME = time.monotonic()
+
 
 def load_cache():
-    try:
-        d = json.load(open(CACHE_PATH, encoding="utf-8"))
-        return d if isinstance(d, dict) else {}
-    except Exception:
+    if not os.path.exists(CACHE_PATH):
         return {}
+    if os.path.getsize(CACHE_PATH) == 0:
+        return {}
+    try:
+        with open(CACHE_PATH, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        if not isinstance(data, dict):
+            raise ValueError(f"Cache root must be a dict, got {type(data).__name__}")
+        return data
+    except Exception as exc:
+        bak = f"{CACHE_PATH}.corrupt.{int(time.time())}"
+        print(f"CRITICAL: Failed to read {CACHE_PATH}: {exc}", file=sys.stderr)
+        print(f"Backing up corrupted file to {bak} and aborting to prevent cache wipe.", file=sys.stderr)
+        try:
+            import shutil
+            shutil.copy2(CACHE_PATH, bak)
+        except Exception:
+            pass
+        raise SystemExit(1)
 
 
-def save_cache(cache):
-    tmp = CACHE_PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(cache, fh, ensure_ascii=True, sort_keys=True)
-    os.replace(tmp, CACHE_PATH)
+def save_cache(cache, min_entries=0):
+    if not isinstance(cache, dict):
+        raise TypeError("save_cache: cache must be a dict")
+    if min_entries > 0 and len(cache) < min_entries:
+        raise RuntimeError(
+            f"Cache size regression: refusing to overwrite {min_entries} entries with {len(cache)}"
+        )
+    dir_name = os.path.dirname(os.path.abspath(CACHE_PATH))
+    fd, tmp_path = tempfile.mkstemp(dir=dir_name, prefix="vt_cache_", suffix=".tmp")
+    try:
+        with open(fd, "w", encoding="utf-8") as fh:
+            json.dump(cache, fh, ensure_ascii=True, sort_keys=True, indent=2)
+            fh.flush()
+            os.fsync(fh.fileno())
+        for attempt in range(5):
+            try:
+                os.replace(tmp_path, CACHE_PATH)
+                break
+            except PermissionError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.1 * (2 ** attempt))
+    except Exception:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+        raise
 
 
 def app_urls():
@@ -112,32 +163,38 @@ def extract_stats(payload):
 def process(urls, cmd, cache, deadline, tag):
     """Process URLs with the given CLI command. Returns (done, quota_hit)."""
     done, fails = 0, 0
-    for i, url in enumerate(urls):
+    initial_len = len(cache)
+    for url in urls:
         if time.time() > deadline - 90:
             print(f"  [{tag}] time budget nearly spent, stopping cleanly "
                   f"({done}/{len(urls)} processed)", flush=True)
             break
-        if i > 0:
-            time.sleep(SLEEP_SECS)
+        polite_sleep(SLEEP_SECS)
         http, payload = cli(cmd, url)
         if http == 429:
-            save_cache(cache)
-            print("quota exhausted, resuming next run", flush=True)
-            return done, True
-        if http == 0:
+            print(f"  [{tag}] HTTP 429 received, backing off 60s...", flush=True)
+            time.sleep(60)
+            http, payload = cli(cmd, url)
+            if http == 429:
+                save_cache(cache, min_entries=initial_len)
+                print("Daily quota exhausted, resuming next run", flush=True)
+                return done, True
+        if http in (0, 500, 502, 503, 504):
             fails += 1
-            print(f"  [{tag}] CLI/network failure on {url[:70]}… "
+            print(f"  [{tag}] Failure (HTTP {http}) on {url[:70]}… "
                   f"({fails} consecutive)", flush=True)
-            save_cache(cache)
             if fails >= 3:
                 print(f"  [{tag}] 3 consecutive failures, aborting run",
                       flush=True)
+                save_cache(cache, min_entries=initial_len)
                 sys.exit(1)
+            time.sleep(5 * fails)
             continue
         fails = 0
         if http == 404:
-            cache[url] = {"status": "unscanned",
-                          "scanned_date": date.today().isoformat()}
+            if cache.get(url, {}).get("status") != "scored":
+                cache[url] = {"status": "unscanned",
+                              "scanned_date": date.today().isoformat()}
             print(f"  [{tag}] unscanned {url[:70]}…", flush=True)
         elif http == 200:
             stats = extract_stats(payload)
@@ -147,13 +204,14 @@ def process(urls, cmd, cache, deadline, tag):
                       f"{stats['suspicious']}s/{stats['total']}t "
                       f"{url[:60]}…", flush=True)
             else:
-                cache[url] = {"status": "unscanned",
-                              "scanned_date": date.today().isoformat()}
+                if cache.get(url, {}).get("status") != "scored":
+                    cache[url] = {"status": "unscanned",
+                                  "scanned_date": date.today().isoformat()}
                 print(f"  [{tag}] no stats {url[:70]}…", flush=True)
         else:
             print(f"  [{tag}] http={http} {url[:70]}… (skipped)",
                   flush=True)
-        save_cache(cache)
+        save_cache(cache, min_entries=initial_len)
         done += 1
     return done, False
 

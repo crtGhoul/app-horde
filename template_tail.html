@@ -208,6 +208,21 @@ function top25() {
   top.forEach((a, i) => { a._rank = i + 1; });
   return top;
 }
+let ALL_APPS = [];
+function prepareIndex() {
+  const seen = new Set();
+  ALL_APPS = [];
+  Object.values(DB.cats || {}).forEach(arr => {
+    arr.forEach(a => {
+      if (!seen.has(a.name)) {
+        seen.add(a.name);
+        a._q = (a.name + ' ' + (a.dev || '') + ' ' + (a.bundle || []).join(' ')).toLowerCase();
+        ALL_APPS.push(a);
+      }
+    });
+  });
+}
+
 function filtered() {
   if (tab === 'top25') {
     let apps = top25();
@@ -215,24 +230,17 @@ function filtered() {
       apps = apps.filter(a => a.src.includes(srcFilter));
     if (q) {
       const needle = q.toLowerCase();
-      apps = apps.filter(a =>
-        a.name.toLowerCase().includes(needle) ||
-        (a.dev || '').toLowerCase().includes(needle) ||
-        a.bundle.some(b => b.toLowerCase().includes(needle)));
+      apps = apps.filter(a => (a._q || (a.name + ' ' + (a.dev || '') + ' ' + (a.bundle || []).join(' ')).toLowerCase()).includes(needle));
     }
     return apps;
   }
-  // any query searches the entire horde, not just the current category
-  let apps = (q || tab === 'repo') ? Object.values(DB.cats).flat()
+  let apps = (q || tab === 'repo') ? ALL_APPS
              : tab === 'faves' ? favApps() : DB.cats[tab] || [];
   if (srcFilter !== 'all')
     apps = apps.filter(a => a.src.includes(srcFilter));
   if (q) {
     const needle = q.toLowerCase();
-    apps = apps.filter(a =>
-      a.name.toLowerCase().includes(needle) ||
-      (a.dev || '').toLowerCase().includes(needle) ||
-      a.bundle.some(b => b.toLowerCase().includes(needle)));
+    apps = apps.filter(a => (a._q || a.name.toLowerCase()).includes(needle));
   }
   const arr = apps.slice();
   const rateScore = a => (a.it && a.it.c >= 5000) ? a.it.r : -1;
@@ -265,7 +273,7 @@ function cardHTML(a) {
     + (tooNew(a) ? `<span class="src s-noios">⚠ NEEDS iOS ${esc(reqIos(a))}+</span>` : '');
   const tweak = a.tweak ? `<div class="tp">${esc(a.tweak)}</div>` : '';
   const fav = favs.has(a.name);
-  return `<div class="card${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
+  return `<div class="card${tooNew(a) ? ' oldios' : ''}" tabindex="0" role="button" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
     <div class="badge">${a.n} BUILDS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
     <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" title="save to favorites">${fav ? '★' : '☆'}</button></div></div>
     <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
@@ -317,35 +325,76 @@ function paintFresh() {
 }
 
 let renderToken = 0;
+let cardObserver = null;
+let sentinelObserver = null;
+const PAGE_SIZE = 60;
+let displayedCount = 0;
+let currentApps = [];
+
+function getCardObserver() {
+  if (!cardObserver) {
+    cardObserver = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('vis'); cardObserver.unobserve(e.target); }
+    }), { rootMargin: '80px' });
+  }
+  return cardObserver;
+}
+
+function appendBatch() {
+  const io = getCardObserver();
+  const frag = document.createDocumentFragment();
+  const nextCount = Math.min(displayedCount + PAGE_SIZE, currentApps.length);
+  for (; displayedCount < nextCount; displayedCount++) {
+    const w = document.createElement('div');
+    w.innerHTML = cardHTML(currentApps[displayedCount]);
+    const card = w.firstElementChild;
+    frag.appendChild(card);
+    io.observe(card);
+  }
+  grid.appendChild(frag);
+
+  let sentinel = document.getElementById('grid-sentinel');
+  if (displayedCount < currentApps.length) {
+    if (!sentinel) {
+      sentinel = document.createElement('div');
+      sentinel.id = 'grid-sentinel';
+      sentinel.style.cssText = 'grid-column:1/-1;height:40px;';
+      grid.after(sentinel);
+    }
+    if (!sentinelObserver) {
+      sentinelObserver = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting && displayedCount < currentApps.length) {
+          appendBatch();
+        }
+      }, { rootMargin: '250px' });
+    }
+    sentinelObserver.observe(sentinel);
+  } else if (sentinel) {
+    if (sentinelObserver) sentinelObserver.unobserve(sentinel);
+    sentinel.remove();
+  }
+}
+
 function render() {
-  const apps = filtered();
-  const my = ++renderToken;
+  currentApps = filtered();
+  ++renderToken;
   grid.innerHTML = '';
-  emptyMsg.style.display = apps.length ? 'none' : 'block';
+  displayedCount = 0;
+  emptyMsg.style.display = currentApps.length ? 'none' : 'block';
+
+  if (cardObserver) cardObserver.disconnect();
+  const existingSentinel = document.getElementById('grid-sentinel');
+  if (existingSentinel) existingSentinel.remove();
+
   if (q) {
-    sectTitle.innerHTML = '<span class="glitch" data-t="RESULTS">RESULTS</span>';
-    secSub.textContent = '// ' + apps.length + ' matches' +
+    sectTitle.innerHTML = '<span class="glitch" data-t="Results">Results</span>';
+    secSub.textContent = '// ' + currentApps.length + ' matches' +
       (tab === 'repo' ? ' in this repo' : ' across all categories');
   } else if (tab === 'repo') {
-    paintRepoHeader(apps.length);
+    paintRepoHeader(currentApps.length);
   }
-  let i = 0;
-  const io = new IntersectionObserver(es => es.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('vis'); io.unobserve(e.target); }
-  }), { rootMargin: '60px' });
-  (function chunk() {
-    if (my !== renderToken) return;
-    const frag = document.createDocumentFragment();
-    const end = Math.min(i + 60, apps.length);
-    for (; i < end; i++) {
-      const w = document.createElement('div');
-      w.innerHTML = cardHTML(apps[i]);
-      const card = w.firstChild;
-      frag.appendChild(card); io.observe(card);
-    }
-    grid.appendChild(frag);
-    if (i < apps.length) requestAnimationFrame(chunk);
-  })();
+
+  if (currentApps.length) appendBatch();
 }
 
 grid.addEventListener('click', e => {
@@ -353,6 +402,16 @@ grid.addEventListener('click', e => {
   if (fs) { e.stopPropagation(); toggleFav(fs.dataset.name); return; }
   const card = e.target.closest('.card');
   if (card) openModal(card.dataset.name, card.dataset.sector);
+});
+
+grid.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    const card = e.target.closest('.card');
+    if (card && document.activeElement === card) {
+      e.preventDefault();
+      openModal(card.dataset.name, card.dataset.sector);
+    }
+  }
 });
 
 /* ---------- 7b. Favorites ---------- */
@@ -640,7 +699,7 @@ function enterRepo(key) {
   grid.style.display = 'grid';
   emptyMsg.style.display = 'none';
   paintRepoHeader(
-    Object.values(DB.cats).flat().filter(a => (a.src || []).includes(key)).length);
+    ALL_APPS.filter(a => (a.src || []).includes(key)).length);
   render();
   window.scrollTo(0, 0);
   try { history.replaceState(null, '', location.pathname + location.search); }
@@ -655,8 +714,16 @@ function setRepoFilter(key) {
 }
 
 /* ---------- 9. Wiring ---------- */
-document.getElementById('q').addEventListener('input', e => {
-  q = e.target.value.trim();
+function debounce(fn, ms) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
+const handleSearch = debounce(val => {
+  q = val.trim();
   if (tab === 'home') {
     if (q) {
       document.getElementById('homepanels').style.display = 'none';
@@ -664,7 +731,9 @@ document.getElementById('q').addEventListener('input', e => {
       render();
     } else setTab('home');
   } else render();
-});
+}, 180);
+
+document.getElementById('q').addEventListener('input', e => handleSearch(e.target.value));
 document.getElementById('sort').addEventListener('change', e => {
   sortMode = e.target.value;
   if (tab !== 'home') render();
@@ -747,6 +816,7 @@ function copyBtn(btn) {
   };
 }
 (function init() {
+  prepareIndex();
   const tg = document.getElementById('topgrid');
   tg.innerHTML = DB.top.map(cardHTML).join('');
   tg.querySelectorAll('.card').forEach(c => c.classList.add('vis'));

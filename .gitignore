@@ -5,3 +5,8 @@ sources/*.json
 # Local test builds
 /tmp/
 *.tmp.html
+
+# Python cache
+__pycache__/
+*.pyc
+
