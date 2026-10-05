@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#060806">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>APP_HORDE — iOS Sideloading App Index</title>
 <meta name="description" content="{{META_DESC}}">
 <meta property="og:type" content="website">
@@ -20,11 +17,11 @@
 <style>/* ================= APP_HORDE theme ================= */
 :root{
   --bg:#060806; --panel:#0a0d09; --card:#0b0e0a;
-  --text:#b9e8bd; --muted:#7da280;
+  --text:#b9e8bd; --muted:#5f7a62;
   --toxic:#39ff14; --blood:#ff1a3c; --amber:#ffb000; --cyan:#00e5ff;
   --border:#14301a; --dim:#0e150d;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
 html{scrollbar-color:var(--border) var(--bg)}
 body{
   margin:0; background:var(--bg); color:var(--text); overflow-x:hidden;
@@ -45,7 +42,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:199;
 ::-webkit-scrollbar-thumb{background:#14301a;border:2px solid #050705}
 ::-webkit-scrollbar-thumb:hover{background:var(--toxic)}
 ::selection{background:var(--blood);color:#fff}
-.wrap{max-width:1120px;margin:0 auto;padding:0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));position:relative;z-index:2}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px;position:relative;z-index:2}
 
 /* ================= boot ================= */
 #boot{position:fixed;inset:0;background:#020402;z-index:1000;
@@ -57,13 +54,13 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:199;
   text-shadow:0 0 8px rgba(57,255,20,.6);min-height:220px}
 #boot .bar{width:min(640px,92vw);height:6px;background:#0a140b;border:1px solid var(--border);margin-top:12px}
 #bootbar{height:100%;width:0;background:var(--toxic);box-shadow:0 0 10px var(--toxic)}
-#bootskip{position:absolute;bottom:calc(26px + env(safe-area-inset-bottom, 0px));background:none;border:1px solid var(--border);
-  color:var(--muted);font-size:12px;letter-spacing:2px;padding:10px 18px;cursor:pointer;font-family:inherit;min-height:44px}
+#bootskip{position:absolute;bottom:26px;background:none;border:1px solid var(--border);
+  color:var(--muted);font-size:12px;letter-spacing:2px;padding:8px 18px;cursor:pointer;font-family:inherit}
 #bootskip:hover{color:var(--toxic);border-color:var(--toxic)}
 
 /* ================= tabs ================= */
-.tabs{position:sticky;top:0;z-index:100;background:rgba(4,6,4,.95);border-bottom:1px solid var(--border);padding-top:env(safe-area-inset-top, 0px)}
-.tabs .wrap{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 16px;align-items:center}
+.tabs{position:sticky;top:0;z-index:100;background:rgba(4,6,4,.95);border-bottom:1px solid var(--border)}
+.tabs .wrap{display:flex;gap:6px;overflow-x:auto;padding:10px 16px;align-items:center}
 .tab{white-space:nowrap;padding:8px 11px;color:var(--muted);font-size:12.5px;background:none;
   border:1px solid transparent;cursor:pointer;font-family:inherit;letter-spacing:.5px}
 .tab:hover{color:var(--toxic);border-color:var(--border)}
@@ -138,34 +135,27 @@ h2.sec::before{content:"// "}
 .toolbar{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap;position:sticky;top:58px;
   z-index:50;background:rgba(6,8,6,.95);padding:10px 0}
 .toolbar input,.toolbar select{background:#000;border:1px solid var(--border);color:var(--toxic);
-  padding:11px 14px;font-size:16px;font-family:inherit}
+  padding:11px 14px;font-size:13.5px;font-family:inherit}
 .toolbar input{flex:1;min-width:200px}
-.toolbar input::placeholder{color:#628567}
-#myios{flex:0 1 128px;min-width:0}
+.toolbar input::placeholder{color:#33473a}
+#myios{flex:0 1 118px;min-width:0}
 .card.oldios{opacity:.5}
 .src.s-noios{border-color:var(--blood);color:var(--blood)}
 .shots{display:flex;gap:8px;overflow-x:auto;padding:6px 2px}
 .shots img{height:132px;border-radius:8px;border:1px solid var(--border);flex:0 0 auto}
 .toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--toxic);
   box-shadow:0 0 10px rgba(57,255,20,.35)}
-button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible,.card:focus-visible{
-  outline:2px solid var(--toxic);outline-offset:2px}
 
 /* ================= cards ================= */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;padding-bottom:8px}
 .card{background:var(--card);border:1px solid var(--border);padding:16px 16px 16px 20px;
   position:relative;cursor:pointer;opacity:0;transform:translateY(16px);
-  content-visibility:auto;contain-intrinsic-size:auto 150px;
-  transition:opacity .35s,transform .35s,border-color .15s}
+  transition:opacity .45s,transform .45s,border-color .15s,box-shadow .15s}
 .card.vis{opacity:1;transform:none}
 .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
   background:var(--toxic);opacity:.65}
-@media (hover: hover) and (pointer: fine) {
-  .tile:hover{border-color:var(--toxic);box-shadow:0 0 18px rgba(57,255,20,.28);transform:translateY(-3px)}
-  .card:hover{border-color:var(--toxic);box-shadow:0 0 16px rgba(57,255,20,.22)}
-  .card:hover::before{background:var(--blood);box-shadow:0 0 10px var(--blood)}
-}
-.tile:active,.card:active{border-color:var(--toxic)}
+.card:hover{border-color:var(--toxic);box-shadow:0 0 16px rgba(57,255,20,.22)}
+.card:hover::before{background:var(--blood);box-shadow:0 0 10px var(--blood)}
 .badge{position:absolute;top:12px;right:12px;background:#160a0d;border:1px solid var(--blood);
   color:var(--blood);font-size:10.5px;padding:3px 9px;white-space:nowrap;font-weight:700;letter-spacing:1px}
 .badge.rank{left:12px;right:auto;border-color:var(--toxic);color:var(--toxic);background:#0b140b}
@@ -200,18 +190,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible,.c
 
 /* ================= modal ================= */
 #modal{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;
-  padding:max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
-  background:rgba(2,4,2,.82);backdrop-filter:blur(3px)}
+  padding:18px;background:rgba(2,4,2,.82);backdrop-filter:blur(3px)}
 #modal.open{display:flex}
 .mbox{background:#070a07;border:1px solid var(--toxic);max-width:600px;width:100%;
-  max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px);
-  overflow-y:auto;-webkit-overflow-scrolling:touch;padding:26px;position:relative;
+  max-height:88vh;overflow-y:auto;padding:26px;position:relative;
   box-shadow:0 0 40px rgba(57,255,20,.25);animation:mup .25s both}
 @keyframes mup{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
 .mbox h3{font-size:20px;margin:0 0 4px}
 .mbox .glitch{font-size:24px;letter-spacing:1px}
 .mx{position:absolute;top:12px;right:12px;background:none;border:1px solid var(--blood);
-  color:var(--blood);font-family:inherit;font-size:12px;padding:8px 12px;cursor:pointer;letter-spacing:1px;min-width:44px;min-height:44px}
+  color:var(--blood);font-family:inherit;font-size:12px;padding:6px 10px;cursor:pointer;letter-spacing:1px}
 .mx:hover{background:var(--blood);color:#000}
 .msec{color:var(--muted);font-size:11px;letter-spacing:2px;margin-bottom:14px}
 .msec::before{content:"◈ "}
@@ -222,13 +210,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible,.c
 .bid code{background:#000;border:1px solid var(--border);color:var(--cyan);
   padding:3px 8px;font-size:11.5px;word-break:break-all}
 .cpy{background:none;border:1px solid var(--border);color:var(--muted);font-family:inherit;
-  font-size:10.5px;padding:4px 10px;margin-left:8px;cursor:pointer;letter-spacing:1px}
+  font-size:10.5px;padding:3px 9px;margin-left:8px;cursor:pointer;letter-spacing:1px}
 .cpy:hover{color:var(--toxic);border-color:var(--toxic)}
 .warn{border:1px solid var(--blood);background:rgba(255,26,60,.06);color:#e8b9c0;
   font-size:12px;line-height:1.6;padding:12px 14px;margin:16px 0 0}
 
 /* ================= footer ================= */
-footer{color:var(--muted);font-size:11.5px;padding:34px 0 calc(34px + env(safe-area-inset-bottom, 0px));text-align:center;
+footer{color:#3d5240;font-size:11.5px;padding:34px 0;text-align:center;
   border-top:1px solid var(--border);margin-top:36px;letter-spacing:1px;
   line-height:1.8;position:relative;z-index:2}
 footer .skull{color:var(--blood);font-size:15px}
@@ -277,8 +265,8 @@ footer .skull{color:var(--blood);font-size:15px}
 .cta:hover{filter:brightness(1.12)}
 
 /* ================= favorites + version picker + fixes ================= */
-.fstar{background:none;border:none;font:inherit;color:var(--muted);font-size:18px;
-  cursor:pointer;padding:10px;margin:-10px;line-height:1;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.fstar{background:none;border:none;font:inherit;color:var(--muted);font-size:15px;
+  cursor:pointer;padding:0 2px 0 6px;line-height:1;vertical-align:baseline}
 .fstar:hover{color:var(--amber);text-shadow:0 0 8px var(--amber)}
 .fstar.on{color:var(--amber);text-shadow:0 0 8px var(--amber)}
 .mfav{display:inline-block;background:none;border:1px solid var(--border);
@@ -289,7 +277,7 @@ footer .skull{color:var(--blood);font-size:15px}
 .vsrc{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .vinst{display:flex;align-items:center;gap:6px;margin:-2px 0 12px;flex-wrap:wrap}
 .vsrc select{background:#000;border:1px solid var(--border);color:var(--text);
-  font-family:inherit;font-size:16px;padding:7px 8px;max-width:230px;cursor:pointer}
+  font-family:inherit;font-size:12.5px;padding:7px 8px;max-width:230px;cursor:pointer}
 .vsrc select:focus{border-color:var(--toxic);outline:none}
 .fix{padding:13px 16px;border-bottom:1px solid var(--dim)}
 .fix:last-child{border-bottom:none}
@@ -390,7 +378,22 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   pick the one that fits you.</p>
 </div>
 
-<h2 class="sec">1 · pick your path</h2>
+<h2 class="sec">1 · what's going on lately</h2>
+<p class="secsub">// fresh intel — updated oct 5, 2026 · unconfirmed rumors are marked as such</p>
+<div class="gbox rules">
+  <p><b>☠ LiveContainer is having a rough patch.</b> If yours broke recently, you're not alone — these are real, from LiveContainer's own GitHub issues and FAQ:</p>
+  <p>① <b>Crash on launch on iOS 26.4+:</b> update to LiveContainer 3.6.65 or newer. Older builds just die on new iOS.</p>
+  <p>② <b>Built-in SideStore freezes or closes the second you open it:</b> fixed in LiveContainer 3.7.2+. Update.</p>
+  <p>③ <b>JIT apps fail with "Another LiveContainer is not installed":</b> iOS 26 doesn't auto-detect the 2nd container. Open your 2nd LiveContainer app first, leave it running, then go back to the first. Also: JIT on iOS 26 needs the <b>StikDebug</b> app (free on the App Store) — the old airplane-mode JIT trick died in iOS 26.4.</p>
+  <p>④ <b>SideStore won't sign in</b> (ADI -45061 "device not provisioned", HTTP 503 errors): known issue on recent nightlies. Workaround people report: install and re-sign with <b>iLoader</b> from a computer instead — apps stay signed and launch fine even when SideStore's own UI is broken. Re-run iLoader every 7 days.</p>
+  <p>⑤ <b>"Maximum number of installed apps using a free developer profile":</b> that's the 3-app limit. Apps running <i>inside</i> LiveContainer don't count — only apps SideStore/AltStore install directly do. Delete one or move apps into LiveContainer.</p>
+  <p><b>☠ Apple is banning accounts for sideloading modded apps.</b> Verified: Apple terminated paid developer accounts used to sideload modified YouTube/Twitter builds (reported Feb 2026 and again in 2026). Community reports (Sept 2026) also claim mass Apple ID bans for sideloading — unconfirmed, but the pattern is real enough: this is exactly why survival rule ① below says use a spare Apple ID. Never sign with your main.</p>
+  <p><b>AltStore 2.3 (Sept 30, 2026) added Remote AltServer:</b> after the first PC setup, install and refresh apps from anywhere over Wi-Fi — no more same-network refresh dance.</p>
+  <p><b>iOS 27 is out.</b> Early days: expect sideloading tools to break and get fixed in waves. If you're on iOS 27 and something fails, check the tool's GitHub issues page before reinstalling everything.</p>
+  <p><b>TrollStore reality check:</b> official TrollStore still only supports iOS 14.0–17.0. Don't believe "TrollStore for iOS 26" videos — experimental forks exist but aren't proven on real devices.</p>
+</div>
+
+<h2 class="sec">2 · pick your path</h2>
 <div class="paths">
   <div class="path">
     <div class="ptag">easiest · no computer</div>
@@ -412,7 +415,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
       <li>Plug in your iPhone, open AltServer, and <b>Install AltStore</b> to your phone. Use a spare Apple ID if you like.</li>
       <li>On your iPhone: <b>Settings → General → VPN &amp; Device Management</b> → trust the profile. On iOS 16+, also enable <b>Developer Mode</b> in <b>Settings → Privacy &amp; Security</b>.</li>
       <li>Open AltStore → <b>Sources</b> tab → <b>+</b> → paste the source links from section 3. Now you can browse and install both repos right inside AltStore.</li>
-      <li>Re-open AltStore on the same Wi-Fi as your computer every 7 days to refresh your apps.</li>
+      <li>Refresh your apps every 7 days — with AltStore 2.3+ you can do it from anywhere over Wi-Fi via Remote AltServer after the first setup. Older versions need your phone on the same Wi-Fi as your computer.</li>
     </ol>
   </div>
   <div class="path">
@@ -427,7 +430,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   </div>
 </div>
 
-<h2 class="sec">2 · download links</h2>
+<h2 class="sec">3 · download links</h2>
 <p class="secsub">// only download these from their official sites — fakes carry malware</p>
 <div class="dllist">
   <div class="dlrow"><div><b>AltServer</b><span>for Mac &amp; Windows — the free computer route (Path B)</span></div><a class="gbtn" href="https://altstore.io" target="_blank" rel="noopener">GET ↗</a></div>
@@ -440,20 +443,20 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <div class="dlrow"><div><b>TrollStore install guide</b><span>official step-by-step at ios.cfw.guide</span></div><a class="gbtn" href="https://ios.cfw.guide/installing-trollstore" target="_blank" rel="noopener">GET ↗</a></div>
 </div>
 
-<h2 class="sec">3 · add the sources</h2>
+<h2 class="sec">4 · add the sources</h2>
 <div class="gbox">
   <p>{{GUIDE_SRC_INTRO}}</p>
 {{GUIDE_SRC_ROWS}}
 </div>
 
-<h2 class="sec">4 · which sources are safe</h2>
+<h2 class="sec">5 · which sources are safe</h2>
 <p class="secsub">// trust-ranked — official dev sources first, big community repos second</p>
 <div class="gbox">
   <div id="safesrc"></div>
   <p class="dim" style="margin-top:10px">Rule of thumb: prefer official dev sources, then big community repos — and always read an app's intel panel (bundle-ID match, repo count, version sanity) before installing anything. No list makes sideloading risk-free.</p>
 </div>
 
-<h2 class="sec">5 · install from this site</h2>
+<h2 class="sec">6 · install from this site</h2>
 <div class="gbox">
   <ol class="steps">
     <li><b>Find an app</b> — search the horde or browse a sector.</li>
@@ -463,7 +466,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   </ol>
 </div>
 
-<h2 class="sec">6 · survival rules</h2>
+<h2 class="sec">7 · survival rules</h2>
 <div class="gbox rules">
   <p><b>① Use a spare Apple ID</b> for signing — never your main one.</p>
   <p><b>② Free Apple IDs expire every 7 days.</b> Re-open AltStore/SideStore on Wi-Fi to refresh before apps die.</p>
@@ -473,7 +476,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <p><b>⑥ If an app asks for logins it shouldn't need</b>, delete it. When in doubt, check the uploader and the FRESH badge.</p>
 </div>
 
-<h2 class="sec">7 · when things break</h2>
+<h2 class="sec">8 · when things break</h2>
 <p class="secsub">// the errors every beginner hits, and the fix for each</p>
 <div class="dllist">
   <div class="fix"><b>✗ "Unable to Verify App"</b><span>Your certificate was revoked or expired. Re-sign the app: in Scarlet re-import your certificate and reinstall; in AltStore/SideStore open the app and refresh. Free/shared certificates die often — this is normal.</span></div>
@@ -486,9 +489,14 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <div class="fix"><b>✗ TrollStore won't install an app</b><span>Check your iOS version: TrollStore only works on 14.0–17.0, never 17.0.1+. Also use .tipa builds (marked TIPA in the version picker) for TrollStore-only apps.</span></div>
   <div class="fix"><b>✗ Download link is dead</b><span>Try the other source's button in the app's intel, or pick an older build from the version picker. Repo CDNs move files around.</span></div>
   <div class="fix"><b>✗ "You hit the 3-app limit"</b><span>Free Apple IDs can only keep 3 sideloaded apps active. Delete one in AltStore/SideStore to make room, or look into LiveContainer to bundle more.</span></div>
+  <div class="fix"><b>✗ LiveContainer crashes on launch (iOS 26.4+)</b><span>Update to LiveContainer 3.6.65 or newer — older builds crash on iOS 26.4+. Still failing? Reboot once and retry.</span></div>
+  <div class="fix"><b>✗ "Another LiveContainer is not installed" (JIT apps fail)</b><span>iOS 26 doesn't auto-detect the 2nd container. Open your 2nd LiveContainer app, leave it running, then go back to the first. JIT on iOS 26 also needs the free StikDebug app from the App Store — the old airplane-mode trick died in iOS 26.4.</span></div>
+  <div class="fix"><b>✗ Built-in SideStore freezes or closes on launch</b><span>Update LiveContainer to 3.7.2 or newer — that fixed the launch freeze / watchdog kill.</span></div>
+  <div class="fix"><b>✗ SideStore won't sign in (ADI -45061 / HTTP 503)</b><span>Known issue on recent SideStore nightlies. Workaround: install and re-sign with iLoader from a computer — apps stay signed and launch fine even if SideStore's own UI is broken. Re-run iLoader every 7 days.</span></div>
+  <div class="fix"><b>✗ "This NSPersistentStoreCoordinator has no persistent stores"</b><span>Nightly-build bug when switching between SideStore and LiveContainer installs. Use the latest stable release instead of a nightly.</span></div>
 </div>
 
-<h2 class="sec">8 · verify before you install</h2>
+<h2 class="sec">9 · verify before you install</h2>
 <p class="secsub">// every app's intel panel runs these checks for you — here's what they mean, and what to check yourself</p>
 <div class="gbox rules">
   <p><b>① Open the app's intel and read the VERIFICATION row.</b> It automatically checks three things: whether the bundle ID matches a real App Store listing, how many independent repos carry the app, and whether the repo's build version lines up with the App Store's current release.</p>
@@ -526,6 +534,8 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
 
 <footer><span class="skull">☣</span><br>
 built from {{FOOTER_SOURCES}} — deduped &amp; app-store verified<br>
+this whole site was coded by strider, my AI assistant (Muse)<br>
+<span class="invite">☠ check out <a href="https://muse.ai/join" target="_blank" rel="noopener">Muse, your personal AI agent</a> — redeem my code <code>0NS5DG</code><button class="cpy" data-c="0NS5DG">COPY</button> in Settings within 48 hours of joining and we'll both get 1 billion Muse tokens ☠</span><br>
 unofficial builds — do your own research · use at your own risk<br>
 corrections or removal requests → <a href="https://github.com/crtGhoul" target="_blank" rel="noopener">crtghoul on github</a><br>
 the horde remembers · for reference only · data as of {{DATA_DATE}}<br>
