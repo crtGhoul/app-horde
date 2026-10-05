@@ -4,7 +4,14 @@
   <title>app-horde — fresh drops</title>
   <link>https://crtghoul.github.io/app-horde/</link>
   <description>Apps with new builds indexed by app-horde in the last 7 days. Refreshed every monday.</description>
-  <lastBuildDate>Mon, 05 Oct 2026 06:28:54 GMT</lastBuildDate>
+  <lastBuildDate>Mon, 05 Oct 2026 14:21:32 GMT</lastBuildDate>
+  <item>
+    <title>Scanner v2.12.6</title>
+    <link>https://crtghoul.github.io/app-horde/#app=Scanner</link>
+    <guid>https://crtghoul.github.io/app-horde/#app=Scanner</guid>
+    <pubDate>Mon, 05 Oct 2026 00:00:00 GMT</pubDate>
+    <description>v2.12.6 — Scanner+ Docs IPA for iOS stands out as a refined solution designed to transform the way we manage documents on mobile ​devices. ​Combin (via alans, apptesters)</description>
+  </item>
   <item>
     <title>Spotify v9.1.78</title>
     <link>https://crtghoul.github.io/app-horde/#app=Spotify</link>
@@ -370,13 +377,6 @@ Return to your hometown to revive your grandfather&#x27;s culinary legacy and ri
     <guid>https://crtghoul.github.io/app-horde/#app=Gratitude</guid>
     <pubDate>Sat, 03 Oct 2026 00:00:00 GMT</pubDate>
     <description>v5.8.3 — Gratitude: Self-Care Journal  Tweak: Pro Unlocked  Version: 5.8.2  Patched ✓  @riftysIPAlibrary  Additional Information ℹ️  Min OS (via alans, apptesters)</description>
-  </item>
-  <item>
-    <title>Minecraft v1.26.52</title>
-    <link>https://crtghoul.github.io/app-horde/#app=Minecraft</link>
-    <guid>https://crtghoul.github.io/app-horde/#app=Minecraft</guid>
-    <pubDate>Sat, 03 Oct 2026 00:00:00 GMT</pubDate>
-    <description>v1.26.52 — Join https://t.me/+rvcObIvOpctiMDI9 for more. One of the best selling games on the planet! https://t.me/kamohacks for other game releases (via alans, apptesters)</description>
   </item>
 </channel>
 </rss>
