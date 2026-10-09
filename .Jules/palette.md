@@ -1,0 +1,3 @@
+## 2026-10-09 - Missing ARIA pressed states on favorite toggles
+**Learning:** Found a specific pattern in this app's components where custom toggle buttons (e.g. favorite stars) lacked the `aria-pressed` attribute and had static `title`/`aria-label` texts. This is common when visual toggles use classes (`.on`) and icons (`★`/`☆`) to convey state. Screen readers need both explicit state (`aria-pressed`) and an accurate text label.
+**Action:** When implementing or updating custom toggle buttons that convey on/off state visually (like favorite, save, or like buttons), ensure `aria-pressed="true/false"` is bound to the state, and that the `aria-label` updates dynamically to reflect the current action ("Save to favorites" vs "Remove from favorites").
