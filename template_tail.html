@@ -489,13 +489,16 @@ function updatedRow(a) {
     : 'unknown';
 }
 /* One-tap installer deep-links. Schemes verified 2026-10-01 against official
-   docs / production usage. Scarlet has no documented install scheme, so it is
-   deliberately omitted — Scarlet users get the direct download instead. */
+   docs / production usage (LiveContainer verified 2026-10-09 via LcInstaller
+   + tempo-builds READMEs: livecontainer://install?url=<ipa>). Scarlet has no
+   documented install scheme, so it is deliberately omitted — Scarlet users
+   get the direct download instead. */
 const INSTS = [
   ['altstore', 'AltStore', 'altstore://install?url='],
   ['sidestore', 'SideStore', 'sidestore://install?url='],
   ['trollstore', 'TrollStore', 'apple-magnifier://install?url='],
   ['feather', 'Feather', 'feather://install/'],
+  ['livecontainer', 'LiveContainer', 'livecontainer://install?url='],
 ];
 const REDIRECTOR = 'https://intradeus.github.io/http-protocol-redirector?r=';
 function installerLink(inst, ipaUrl) {
