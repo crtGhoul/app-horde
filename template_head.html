@@ -141,8 +141,6 @@ h2.sec::before{content:"// "}
 #myios{flex:0 1 118px;min-width:0}
 .card.oldios{opacity:.5}
 .src.s-noios{border-color:var(--blood);color:var(--blood)}
-.shots{display:flex;gap:8px;overflow-x:auto;padding:6px 2px}
-.shots img{height:132px;border-radius:8px;border:1px solid var(--border);flex:0 0 auto}
 .toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--toxic);
   box-shadow:0 0 10px rgba(57,255,20,.35)}
 
@@ -203,7 +201,8 @@ h2.sec::before{content:"// "}
 .mx:hover{background:var(--blood);color:#000}
 .msec{color:var(--muted);font-size:11px;letter-spacing:2px;margin-bottom:14px}
 .msec::before{content:"◈ "}
-.r{border-top:1px dashed var(--border);padding:10px 0;font-size:12.5px;line-height:1.7}
+/* modal rows only — the boot log reuses bare class="r"/"g" spans, which must stay unstyled */
+.mbox .r{border-top:1px dashed var(--border);padding:10px 0;font-size:12.5px;line-height:1.7}
 .k{display:block;font-size:10.5px;letter-spacing:2px;color:var(--toxic);margin-bottom:6px}
 .v{color:var(--text)}
 .bid{margin-bottom:8px}
@@ -214,6 +213,9 @@ h2.sec::before{content:"// "}
 .cpy:hover{color:var(--toxic);border-color:var(--toxic)}
 .warn{border:1px solid var(--blood);background:rgba(255,26,60,.06);color:#e8b9c0;
   font-size:12px;line-height:1.6;padding:12px 14px;margin:16px 0 0}
+/* app-store screenshots inside the intel modal */
+.shots{display:flex;gap:8px;overflow-x:auto;padding:6px 2px}
+.shots img{height:132px;border-radius:8px;border:1px solid var(--border);flex:0 0 auto}
 
 /* ================= footer ================= */
 footer{color:#3d5240;font-size:11.5px;padding:34px 0;text-align:center;
@@ -549,10 +551,15 @@ next refresh in <span id="nxupd">…</span> · the horde feeds every monday</foo
  *  3. Boot sequence   (fake UNDEAD BIOS, skippable)
  *  4. Hero counters
  *  5. Digital rain
- *  6. Category tabs
+ *  6. Category tabs   (+ "my iOS" version filter)
  *  7. Card grid       (search, sort, source filter, batched render)
- *  8. Intel modal     (deep-linkable via #app=<name>)
- *  9. Keyboard shortcuts
+ *  8. Fresh drops     (builds updated in the last 7 days)
+ *  9. Favorites       (localStorage star list)
+ * 10. Intel modal     (app detail, deep-linkable via #app=<name>)
+ * 11. Repo view       (browse + search inside one repo)
+ * 12. Safe sources    (trust-ranked repo list in the guide)
+ * 13. Weekly refresh countdown
+ * 14. Wiring & init   (events, keyboard shortcuts, boot)
  * ========================================================================= */
 
 /* ---------- 1. Data ---------- */

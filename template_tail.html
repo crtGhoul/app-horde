@@ -6,6 +6,8 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+/* fmtNum: App Store rating counts ("12.3K ratings"). fmtCount below is the
+   top-25 rank badge variant — same idea, lowercase "k" to fit the badge. */
 function fmtNum(n) {
   if (n == null) return '?';
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
@@ -123,7 +125,7 @@ const sectTitle = document.getElementById('sectitle');
 const secSub = document.getElementById('secsub');
 let tab = 'home', q = '', sortMode = 'alpha', srcFilter = 'all';
 
-/* ---------- 1b. "my iOS" filter ---------- */
+/* ---------- 6b. "my iOS" filter ---------- */
 /* Apple-reported minimum iOS per app lives in a.it.m. Repo-declared minos is
    ignored: every repo stamps exactly "14.0", a placeholder, not real data. */
 let myIos = '';
@@ -153,13 +155,13 @@ function setTab(t, keepHash = false) {
   } else if (t === 'faves') {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
-    sectTitle.innerHTML = '<span class="glitch" data-t="STARRED">STARRED</span> <span style="color:var(--red)">APPS</span>';
+    sectTitle.innerHTML = '<span class="glitch" data-t="STARRED">STARRED</span> <span style="color:var(--blood)">APPS</span>';
     secSub.textContent = '// ' + favs.size + ' apps in your favorites';
     render();
   } else if (t === 'top25') {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
-    sectTitle.innerHTML = '<span class="glitch" data-t="TOP 25">TOP 25</span> <span style="color:var(--red)">MOST WANTED</span>';
+    sectTitle.innerHTML = '<span class="glitch" data-t="TOP 25">TOP 25</span> <span style="color:var(--blood)">MOST WANTED</span>';
     secSub.textContent = '// ranked by real App Store review count — the closest thing to a popularity chart';
     render();
   } else if (t === 'home') {
@@ -171,7 +173,7 @@ function setTab(t, keepHash = false) {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
     sectTitle.innerHTML = '<span class="glitch" data-t="' + esc(t.toUpperCase()) + '">' +
-      esc(t.toUpperCase()) + '</span> <span style="color:var(--red)">CATEGORY</span>';
+      esc(t.toUpperCase()) + '</span> <span style="color:var(--blood)">CATEGORY</span>';
     secSub.innerHTML = '// ' + DB.counts[t] + ' apps listed · ' +
       '<a href="#" id="clearcat" style="color:var(--toxic)">clear \u00d7</a>';
     const cc = document.getElementById('clearcat');
@@ -208,6 +210,13 @@ function top25() {
   top.forEach((a, i) => { a._rank = i + 1; });
   return top;
 }
+/* Search matches name, uploader, or any bundle ID — shared by the
+   top-25 chart and the regular category/repo grids. */
+function matchesQuery(a, needle) {
+  return a.name.toLowerCase().includes(needle) ||
+    (a.dev || '').toLowerCase().includes(needle) ||
+    a.bundle.some(b => b.toLowerCase().includes(needle));
+}
 function filtered() {
   if (tab === 'top25') {
     let apps = top25();
@@ -215,10 +224,7 @@ function filtered() {
       apps = apps.filter(a => a.src.includes(srcFilter));
     if (q) {
       const needle = q.toLowerCase();
-      apps = apps.filter(a =>
-        a.name.toLowerCase().includes(needle) ||
-        (a.dev || '').toLowerCase().includes(needle) ||
-        a.bundle.some(b => b.toLowerCase().includes(needle)));
+      apps = apps.filter(a => matchesQuery(a, needle));
     }
     return apps;
   }
@@ -229,10 +235,7 @@ function filtered() {
     apps = apps.filter(a => a.src.includes(srcFilter));
   if (q) {
     const needle = q.toLowerCase();
-    apps = apps.filter(a =>
-      a.name.toLowerCase().includes(needle) ||
-      (a.dev || '').toLowerCase().includes(needle) ||
-      a.bundle.some(b => b.toLowerCase().includes(needle)));
+    apps = apps.filter(a => matchesQuery(a, needle));
   }
   const arr = apps.slice();
   const rateScore = a => (a.it && a.it.c >= 5000) ? a.it.r : -1;
@@ -275,7 +278,7 @@ function cardHTML(a) {
   </div>`;
 }
 
-/* ---------- 7a. Fresh drops ---------- */
+/* ---------- 8. Fresh drops ---------- */
 /* Apps with a build updated in the last 7 days, newest first. Suspicious
    version claims are excluded, same as the other featured grids. */
 function verSuspicious(a) {
@@ -316,6 +319,8 @@ function paintFresh() {
     : '<p class="fempty">no fresh builds this week — check back monday</p>';
 }
 
+/* Renders 60 cards per animation frame so huge categories don't jank.
+   renderToken drops a stale pass if the user tabs/searches mid-render. */
 let renderToken = 0;
 function render() {
   const apps = filtered();
@@ -348,14 +353,16 @@ function render() {
   })();
 }
 
-grid.addEventListener('click', e => {
+/* Favorite stars and card clicks behave the same on every grid. */
+function cardAreaClick(e) {
   const fs = e.target.closest('.fstar');
   if (fs) { e.stopPropagation(); toggleFav(fs.dataset.name); return; }
   const card = e.target.closest('.card');
   if (card) openModal(card.dataset.name, card.dataset.sector);
-});
+}
+grid.addEventListener('click', cardAreaClick);
 
-/* ---------- 7b. Favorites ---------- */
+/* ---------- 9. Favorites ---------- */
 let favs = new Set();
 try { favs = new Set(JSON.parse(localStorage.getItem('horde_favs') || '[]')); }
 catch (e) { /* private mode etc. */ }
@@ -392,7 +399,7 @@ function favApps() {
   return out;
 }
 
-/* ---------- 8. Intel modal ---------- */
+/* ---------- 10. Intel modal ---------- */
 const modal = document.getElementById('modal');
 const mbody = document.getElementById('mbody');
 
@@ -488,11 +495,13 @@ function updatedRow(a) {
     ? `${esc(a.updDate)} · <b style="color:var(--toxic)">${daysLabel(a.upd)}</b>`
     : 'unknown';
 }
-/* One-tap installer deep-links. Schemes verified 2026-10-01 against official
-   docs / production usage (LiveContainer verified 2026-10-09 via LcInstaller
-   + tempo-builds READMEs: livecontainer://install?url=<ipa>). Scarlet has no
-   documented install scheme, so it is deliberately omitted — Scarlet users
-   get the direct download instead. */
+/* One-tap installer deep-links. [key, button label, custom-scheme prefix] —
+   every installer gets one button per build in the modal's DOWNLOAD row.
+   Schemes verified 2026-10-01 against official docs / production usage
+   (LiveContainer verified 2026-10-09 via LcInstaller + tempo-builds READMEs:
+   livecontainer://install?url=<ipa>). Scarlet has no documented install
+   scheme, so it is deliberately omitted — Scarlet users get the direct
+   download instead. */
 const INSTS = [
   ['altstore', 'AltStore', 'altstore://install?url='],
   ['sidestore', 'SideStore', 'sidestore://install?url='],
@@ -504,7 +513,9 @@ const REDIRECTOR = 'https://intradeus.github.io/http-protocol-redirector?r=';
 function installerLink(inst, ipaUrl) {
   let deep;
   if (inst === 'feather') {
-    // path-style scheme; encode only when the URL carries its own query string
+    // Feather's scheme is path-style (no ?url=): append the IPA URL raw,
+    // unless it carries its own query string — then encode it so the
+    // deep link isn't chopped at the first ? or &.
     deep = 'feather://install/' + (/[?&#]/.test(ipaUrl) ? encodeURIComponent(ipaUrl) : ipaUrl);
   } else {
     deep = INSTS.find(([k]) => k === inst)[2] + encodeURIComponent(ipaUrl);
@@ -537,6 +548,8 @@ function dlRow(a) {
     `Unofficial build — verify the bundle ID and source before installing.</div>`;
 }
 
+/* pushHash=false when opened from a deep link, so we don't rewrite the
+   #app= hash we just read. */
 function openModal(name, sector, pushHash = true) {
   const apps = DB.cats[sector] || [];
   const a = apps.find(x => x.name === name);
@@ -605,7 +618,7 @@ function closeModal() {
 }
 modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-/* Deep links: #app=<name> opens that app's intel file. */
+/* ---------- 10b. Deep links: #app=<name> opens that app's intel file ---------- */
 const appIndex = new Map();
 Object.entries(DB.cats).forEach(([sector, apps]) =>
   apps.forEach(a => { if (!appIndex.has(a.name)) appIndex.set(a.name, { app: a, sector }); }));
@@ -617,13 +630,13 @@ function routeHash() {
 }
 addEventListener('hashchange', routeHash);
 
-/* ---------- 8b. Repo view: browse + search inside one repo ---------- */
+/* ---------- 11. Repo view: browse + search inside one repo ---------- */
 function paintRepoHeader(n) {
   const label = ((DB.srcmeta || {})[srcFilter] || {}).label || srcFilter;
   sectTitle.style.display = '';
   secSub.style.display = '';
   sectTitle.innerHTML = '<span class="glitch" data-t="REPO">REPO</span> ' +
-    '<span style="color:var(--red)">' + esc(label) + '</span>';
+    '<span style="color:var(--blood)">' + esc(label) + '</span>';
   secSub.innerHTML = '// ' + n.toLocaleString() + ' apps from this repo · ' +
     '<a href="#" id="clearrepo" style="color:var(--toxic)">clear \u00d7</a>';
   const cr = document.getElementById('clearrepo');
@@ -657,7 +670,48 @@ function setRepoFilter(key) {
   else if (tab !== 'home') render();
 }
 
-/* ---------- 9. Wiring ---------- */
+/* ---------- 12. Safe sources (guide) ---------- */
+function renderSafeSources() {
+  const el = document.getElementById('safesrc');
+  if (!el) return;
+  const meta = DB.srcmeta || {}, repos = DB.repos || {};
+  const rows = Object.keys(repos).map(k => {
+    const m = meta[k] || {};
+    return { label: m.label || k.toUpperCase(), official: !!m.official,
+             entries: (repos[k] || {}).entries || 0 };
+  }).sort((a, b) => ((b.official - a.official) || (b.entries - a.entries)));
+  el.innerHTML = rows.map(r =>
+    `<div class="fix"><b>${r.official ? '\u2605' : '\u25cf'} ${esc(r.label)}</b>` +
+    `<span>${r.official
+      ? 'Official developer source \u2014 the safest tier, run by the app makers themselves.'
+      : 'Large community repo \u2014 widely used, but community-run. Check the app intel before installing.'}` +
+    ` ${r.entries.toLocaleString()} apps indexed.</span></div>`).join('');
+}
+
+/* ---------- 13. Weekly refresh countdown ---------- */
+function startRefreshCountdown() {
+  const el = document.getElementById('nxupd');
+  const r = DB.refresh;
+  if (!el || !r) return;
+  const pad = n => (n < 10 ? '0' : '') + n;
+  // Chicago wall-clock time (DST-safe enough for a weekly countdown).
+  const chiNow = () => new Date(new Date().toLocaleString('en-US', { timeZone: r.tz }));
+  function tick() {
+    const now = chiNow();
+    const t = new Date(now);
+    t.setHours(r.hh, r.mm, 0, 0);
+    let add = (r.dow - t.getDay() + 7) % 7;
+    if (add === 0 && t <= now) add = 7;
+    t.setDate(t.getDate() + add);
+    const s = Math.max(0, Math.floor((t - now) / 1000));
+    el.textContent = Math.floor(s / 86400) + 'd ' + pad(Math.floor(s % 86400 / 3600)) +
+      'h ' + pad(Math.floor(s % 3600 / 60)) + 'm ' + pad(s % 60) + 's';
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+/* ---------- 14. Wiring & init ---------- */
 document.getElementById('q').addEventListener('input', e => {
   q = e.target.value.trim();
   if (tab === 'home') {
@@ -674,8 +728,10 @@ document.getElementById('sort').addEventListener('change', e => {
 });
 document.getElementById('srcf').addEventListener('change', e =>
   setRepoFilter(e.target.value));
-/* "my iOS" filter: flag apps whose App Store minimum exceeds the user's version */
-function repaintHomeCards() {
+/* Home panels: "most builds" + "top rated" grids. Shared by init and the
+   "my iOS" repaint — cards carry NEEDS-iOS flags, so they must be rebuilt
+   when the user's version changes. */
+function paintHomeGrids() {
   const tg = document.getElementById('topgrid');
   if (tg && DB.top) {
     tg.innerHTML = DB.top.map(cardHTML).join('');
@@ -686,6 +742,10 @@ function repaintHomeCards() {
     rg.innerHTML = DB.toprated.map(cardHTML).join('');
     rg.querySelectorAll('.card').forEach(c => c.classList.add('vis'));
   }
+}
+/* "my iOS" filter: flag apps whose App Store minimum exceeds the user's version */
+function repaintHomeCards() {
+  paintHomeGrids();
   paintFresh();
 }
 const myiosEl = document.getElementById('myios');
@@ -716,13 +776,7 @@ document.querySelectorAll('.rtile').forEach(t =>
   t.onclick = () => setRepoFilter(t.dataset.repo));
 ['topgrid', 'rategrid'].forEach(id => {
   const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener('click', e => {
-    const fs = e.target.closest('.fstar');
-    if (fs) { e.stopPropagation(); toggleFav(fs.dataset.name); return; }
-    const card = e.target.closest('.card');
-    if (card) openModal(card.dataset.name, card.dataset.sector);
-  });
+  if (el) el.addEventListener('click', cardAreaClick);
 });
 const fl = document.getElementById('freshlist');
 if (fl) fl.addEventListener('click', e => {
@@ -737,7 +791,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* ---------- init ---------- */
+/* Wiring done — paint the home panels, then boot. */
 function copyBtn(btn) {
   btn.onclick = () => {
     const done = () => {
@@ -750,14 +804,7 @@ function copyBtn(btn) {
   };
 }
 (function init() {
-  const tg = document.getElementById('topgrid');
-  tg.innerHTML = DB.top.map(cardHTML).join('');
-  tg.querySelectorAll('.card').forEach(c => c.classList.add('vis'));
-  const rg = document.getElementById('rategrid');
-  if (rg && DB.toprated) {
-    rg.innerHTML = DB.toprated.map(cardHTML).join('');
-    rg.querySelectorAll('.card').forEach(c => c.classList.add('vis'));
-  }
+  paintHomeGrids();
   paintFresh();
   // source filter options are baked into the HTML by build.py
   buildBootLines();
@@ -773,47 +820,6 @@ function copyBtn(btn) {
   startRain();
   startRefreshCountdown();
 })();
-
-/* ---------- 11. Safe sources (guide) ---------- */
-function renderSafeSources() {
-  const el = document.getElementById('safesrc');
-  if (!el) return;
-  const meta = DB.srcmeta || {}, repos = DB.repos || {};
-  const rows = Object.keys(repos).map(k => {
-    const m = meta[k] || {};
-    return { label: m.label || k.toUpperCase(), official: !!m.official,
-             entries: (repos[k] || {}).entries || 0 };
-  }).sort((a, b) => ((b.official - a.official) || (b.entries - a.entries)));
-  el.innerHTML = rows.map(r =>
-    `<div class="fix"><b>${r.official ? '\u2605' : '\u25cf'} ${esc(r.label)}</b>` +
-    `<span>${r.official
-      ? 'Official developer source \u2014 the safest tier, run by the app makers themselves.'
-      : 'Large community repo \u2014 widely used, but community-run. Check the app intel before installing.'}` +
-    ` ${r.entries.toLocaleString()} apps indexed.</span></div>`).join('');
-}
-
-/* ---------- 10. Weekly refresh countdown ---------- */
-function startRefreshCountdown() {
-  const el = document.getElementById('nxupd');
-  const r = DB.refresh;
-  if (!el || !r) return;
-  const pad = n => (n < 10 ? '0' : '') + n;
-  // Chicago wall-clock time (DST-safe enough for a weekly countdown).
-  const chiNow = () => new Date(new Date().toLocaleString('en-US', { timeZone: r.tz }));
-  function tick() {
-    const now = chiNow();
-    const t = new Date(now);
-    t.setHours(r.hh, r.mm, 0, 0);
-    let add = (r.dow - t.getDay() + 7) % 7;
-    if (add === 0 && t <= now) add = 7;
-    t.setDate(t.getDate() + add);
-    const s = Math.max(0, Math.floor((t - now) / 1000));
-    el.textContent = Math.floor(s / 86400) + 'd ' + pad(Math.floor(s % 86400 / 3600)) +
-      'h ' + pad(Math.floor(s % 3600 / 60)) + 'm ' + pad(s % 60) + 's';
-  }
-  tick();
-  setInterval(tick, 1000);
-}
 </script>
 </body>
 </html>

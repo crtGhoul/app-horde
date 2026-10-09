@@ -225,6 +225,8 @@ VARIANTS_CAP = 40
 
 # ---------------------------------------------------------------- fetch ----
 def fetch_json(url, timeout=60, retries=3):
+    """GET a URL and parse the JSON body, with exponential-backoff retries
+    on transient failures. Raises the last exception when all retries fail."""
     req = urllib.request.Request(url, headers={"User-Agent": "APP_HORDE-build/1.0"})
     last = None
     for attempt in range(retries):
@@ -239,16 +241,23 @@ def fetch_json(url, timeout=60, retries=3):
 
 
 def load_sources(offline):
+    """Fetch every configured source (or reuse snapshots in --offline mode).
+
+    Returns {key: (meta, [app dicts])}; a source that fails to fetch/parse
+    is skipped with a warning so one dead repo can't kill the build.
+    """
     fetched = {}
     for key, meta in SOURCES.items():
         snap = os.path.join(SOURCES_DIR, key + ".json")
         try:
             if offline and os.path.exists(snap):
-                data = json.load(open(snap, encoding="utf-8"))
+                with open(snap, encoding="utf-8") as fh:
+                    data = json.load(fh)
             else:
                 data = fetch_json(meta["url"])
                 os.makedirs(SOURCES_DIR, exist_ok=True)
-                json.dump(data, open(snap, "w", encoding="utf-8"))
+                with open(snap, "w", encoding="utf-8") as fh:
+                    json.dump(data, fh)
             apps = data.get("apps") if isinstance(data, dict) else None
             if not isinstance(apps, list):
                 print(f"  ! {key}: no parseable apps list — skipped", flush=True)
@@ -262,6 +271,7 @@ def load_sources(offline):
 
 # ------------------------------------------------------------ normalize ----
 def norm_date(s):
+    """Normalize a version date to 'YYYY-MM-DD', or '' when unparseable."""
     if not s:
         return ""
     s = str(s).strip()[:10]
@@ -282,6 +292,7 @@ def parse_alans_versions(v):
 
 
 def clean_text(*parts):
+    """Join text parts, dropping empties and collapsing whitespace."""
     t = " ".join(p for p in parts if p).strip()
     t = re.sub(r"\s+", " ", t)
     return t
@@ -306,8 +317,6 @@ def iter_builds(key, meta, apps):
         icon = str(a.get("iconURL") or a.get("icon") or "").strip()
         base_text = clean_text(a.get("subtitle"), a.get("localizedDescription"))
         base = dict(name=name, bundle=bundle, dev=dev, icon=icon,
-                    size=int(str(a.get("size") or 0).strip() or 0)
-                    if str(a.get("size") or "").strip().isdigit() else 0,
                     minos=str(a.get("minOSVersion") or "").strip())
 
         versions = []
@@ -342,6 +351,11 @@ def iter_builds(key, meta, apps):
 
 # ------------------------------------------------------------ seed cache ---
 def split_db(html_text):
+    """Extract and parse the `const DB = {...}` JSON blob from a built page.
+
+    Brace-matches past quoted strings (which may contain braces). Raises
+    (ValueError/IndexError) on malformed input — callers catch Exception.
+    """
     marker = "const DB = "
     i = html_text.find(marker)
     if i < 0:
@@ -377,7 +391,8 @@ def load_seed(path):
     if not os.path.exists(path):
         return seed, {}
     try:
-        db = split_db(open(path, encoding="utf-8").read())
+        with open(path, encoding="utf-8") as fh:
+            db = split_db(fh.read())
     except Exception as e:
         print(f"  ! seed parse failed: {e}", flush=True)
         return seed, {}
@@ -415,7 +430,8 @@ def load_vt_cache():
     """VirusTotal verdict cache {download_url: {...}}, or {} if absent."""
     p = os.path.join(HERE, "vt_cache.json")
     try:
-        d = json.load(open(p, encoding="utf-8"))
+        with open(p, encoding="utf-8") as fh:
+            d = json.load(fh)
         return d if isinstance(d, dict) else {}
     except Exception:
         return {}
@@ -468,14 +484,21 @@ def itunes_lookup(bundles):
 
 # ------------------------------------------------------------ assemble ----
 def valid_bundle(b):
+    """True for a plausible real bundle id (dotted, 2+ labels, not a
+    uploader placeholder like com.unknown / com.example / unknown)."""
     return bool(b) and bool(BUNDLE_OK.match(b)) and not PLACEHOLDER_BUNDLE.match(b)
 
 
 def norm_name(n):
+    """Canonical app identity: lowercase alphanumerics only. Apps are
+    grouped by this, not by bundle id, because tweaked builds reuse
+    junk/placeholder bundle ids across unrelated apps."""
     return re.sub(r"[^a-z0-9]", "", n.lower())
 
 
 def extract_tweak(texts):
+    """Comma-joined tweak labels (e.g. 'pro unlocked, no ads') found in the
+    build descriptions, plus any 'Variant: <Name>' uploader tags."""
     found = []
     blob = " | ".join(texts).lower()
     for kw in TWEAK_KEYWORDS:
@@ -492,7 +515,9 @@ def extract_tweak(texts):
 
 
 def bundle_rank(recs):
-    """Distinct bundle ids, most common valid ones first."""
+    """Distinct bundle ids across an app's build records, most common
+    valid ones first; junk/placeholder ids trail so App Store lookups
+    try the real identities first."""
     cnt = Counter(r["bundle"] for r in recs if r["bundle"])
     valid = sorted([b for b in cnt if valid_bundle(b)], key=lambda b: -cnt[b])
     junk = sorted([b for b in cnt if not valid_bundle(b)], key=lambda b: -cnt[b])
@@ -500,10 +525,22 @@ def bundle_rank(recs):
 
 
 def has_it(it):
+    """True when an App Store lookup result is a real match (has a name)."""
     return bool(it and it.get("name"))
 
 
 def build_db(fetched, seed, old_db):
+    """Assemble the site DB from fetched sources.
+
+    fetched: {source_key: (meta, [app dicts])} from load_sources().
+    seed:    name-keyed {it, desc, tweak, sector, icon} carried over from the
+             previous index.html so only NEW bundle ids hit Apple's API.
+    old_db:  the previous DB (only used to keep the Monday-refresh schedule
+             block stable across rebuilds).
+
+    Returns (db, verified_count). `db` is JSON-serializable and embedded
+    verbatim into index.html as `const DB = {...}`.
+    """
     # Group by normalized app NAME (tweaked builds reuse junk/placeholder bundle
     # ids like com.karbinstoree across unrelated apps; the name is the stable
     # identity). All distinct bundle ids are collected into the bundle list.
@@ -737,10 +774,20 @@ def write_rss(db):
 
 
 def esc_h(s):
+    """HTML-escape a string for safe embedding in the rendered page."""
     return html.escape(str(s), quote=True)
 
 
 def render(db, verified, out_path):
+    """Render index.html: template_head.html with {{PLACEHOLDERS}} filled,
+    then the DB JSON as `const DB = {...}`, then template_tail.html.
+
+    Every placeholder must exist in the head template (asserted) so a
+    template edit that drops one fails loudly instead of shipping a page
+    with raw {{TAGS}} in it. Returns the short SHA-256 digest of the DB
+    JSON, which the weekly action prints so no-op rebuilds can skip the
+    commit.
+    """
     head = open(os.path.join(HERE, "template_head.html"), encoding="utf-8").read()
     tail = open(os.path.join(HERE, "template_tail.html"), encoding="utf-8").read()
 
@@ -818,10 +865,18 @@ def render(db, verified, out_path):
 
 # ---------------------------------------------------------------- main -----
 def main():
+    """CLI: build.py [--offline] [--out <path>].
+
+    --offline reuses sources/*.json snapshots instead of downloading.
+    --out    output path (default: index.html next to this script).
+    """
     offline = "--offline" in sys.argv
     out = "index.html"
     if "--out" in sys.argv:
-        out = sys.argv[sys.argv.index("--out") + 1]
+        i = sys.argv.index("--out")
+        if i + 1 >= len(sys.argv):
+            sys.exit("error: --out needs a value")
+        out = sys.argv[i + 1]
     out = os.path.join(HERE, out) if not os.path.isabs(out) else out
 
     print("fetching sources…", flush=True)

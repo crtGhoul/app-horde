@@ -44,8 +44,11 @@ MAX_UNSCANNED_RETRY = 20  # per monday run
 
 
 def load_cache():
+    """Read vt_cache.json ({download_url: verdict dict}). {} when the file
+    is missing or corrupt — the scan simply re-scores everything."""
     try:
-        d = json.load(open(CACHE_PATH, encoding="utf-8"))
+        with open(CACHE_PATH, encoding="utf-8") as fh:
+            d = json.load(fh)
         return d if isinstance(d, dict) else {}
     except Exception:
         return {}
@@ -89,6 +92,13 @@ def cli(cmd, url):
 
 
 def extract_stats(payload):
+    """Pull the compact {malicious, suspicious, harmless, undetected, total,
+    scanned_date, status} verdict out of a vt.py lookup/check response.
+
+    Returns None when VT has no engine verdicts for the URL — the caller
+    records it as "unscanned" so a later run (or monday's check-mode
+    retries, which submit the file for analysis) picks it up again.
+    """
     try:
         stats = payload["data"]["attributes"]["last_analysis_stats"] or {}
     except (KeyError, TypeError):
@@ -159,6 +169,22 @@ def process(urls, cmd, cache, deadline, tag):
 
 
 def main(argv):
+    """CLI: vt-scan.py (lookup|check|monday) [--max-seconds N] [url]
+
+    lookup: backfill mode — score uncached newest-build URLs via VT lookup
+            (404 -> "unscanned"). This is what the DAILY backfill cron runs.
+    check:  like lookup, but submits uncached URLs for analysis and polls
+            for the verdict.
+    monday: delta mode for the weekly refresh — lookup for uncached URLs,
+            then check-mode retries for up to MAX_UNSCANNED_RETRY previously
+            unscanned URLs.
+
+    A lone positional URL restricts the run to that URL. --max-seconds
+    caps the run's wall-clock budget (the loop stops cleanly ~90s before
+    the deadline). The cache is saved after every URL, so any run is
+    resume-safe. Exits 0 even on VT quota exhaustion; exits 1 only on
+    repeated CLI/network failures or bad arguments.
+    """
     rest = []
     max_seconds = 0
     i = 1
