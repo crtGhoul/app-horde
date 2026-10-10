@@ -270,7 +270,7 @@ function cardHTML(a) {
   const fav = favs.has(a.name);
   return `<div class="card${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
     <div class="badge">${a.n} BUILDS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
-    <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" title="save to favorites">${fav ? '★' : '☆'}</button></div></div>
+    <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" aria-label="${fav ? 'Remove from favorites' : 'Save to favorites'}" aria-pressed="${fav ? 'true' : 'false'}">${fav ? '★' : '☆'}</button></div></div>
     <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
     <div class="pd">${pills}</div>
     ${tweak}
@@ -380,12 +380,15 @@ function syncFavUI() {
     const on = favs.has(b.dataset.name);
     b.textContent = on ? '★' : '☆';
     b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.setAttribute('aria-label', on ? 'Remove from favorites' : 'Save to favorites');
   });
   const mf = document.getElementById('mfav');
   if (mf) {
     const on = favs.has(mf.dataset.name);
     mf.textContent = on ? '★ SAVED' : '☆ SAVE';
     mf.classList.toggle('on', on);
+    mf.setAttribute('aria-pressed', on ? 'true' : 'false');
   }
   if (tab === 'faves') {
     secSub.textContent = '// ' + favs.size + ' apps in your favorites';
@@ -560,9 +563,9 @@ function openModal(name, sector, pushHash = true) {
     `<div class="bid"><code>${esc(b)}</code>` +
     `<button class="cpy" data-c="${esc(b)}">COPY</button></div>`).join('');
   mbody.innerHTML = `
-    <button class="mx" id="mx">✕</button>
+    <button class="mx" id="mx" aria-label="Close modal">✕</button>
     <h3 class="glitch" data-t="${esc(a.name)}">${esc(a.name)}</h3>
-    <button id="mfav" class="mfav" data-name="${esc(a.name)}">☆ SAVE</button>
+    <button id="mfav" class="mfav" data-name="${esc(a.name)}" aria-pressed="${favs.has(a.name) ? 'true' : 'false'}">☆ SAVE</button>
     <div class="msec">${esc(sector)} CATEGORY</div>
     ${row('SOURCES', srcRows(a))}
     ${row('DOWNLOAD', dlRow(a))}
