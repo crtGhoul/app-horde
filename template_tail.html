@@ -561,7 +561,7 @@ function openModal(name, sector, pushHash = true) {
     `<div class="r"><span class="k">${k}</span><span class="v">${v}</span></div>`;
   const bundles = a.bundle.map(b =>
     `<div class="bid"><code>${esc(b)}</code>` +
-    `<button class="cpy" data-c="${esc(b)}">COPY</button></div>`).join('');
+    `<button class="cpy" data-c="${esc(b)}" aria-label="Copy bundle ID">COPY</button></div>`).join('');
   mbody.innerHTML = `
     <button class="mx" id="mx" aria-label="Close modal">✕</button>
     <h3 class="glitch" data-t="${esc(a.name)}">${esc(a.name)}</h3>
