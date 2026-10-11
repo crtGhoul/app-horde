@@ -247,9 +247,10 @@ function filtered() {
 }
 
 /* Source badges driven by DB.srcmeta so new repos need no code changes. */
-function srcBadge(s) {
+function srcBadge(s, hi) {
   const m = (DB.srcmeta || {})[s] || {};
-  return '<span class="src ' + esc(m.cls || 's-apt') + '">' + esc(m.label || s.toUpperCase()) + '</span>';
+  const cls = esc(m.cls || 's-apt') + (hi ? ' src-hi' : '');
+  return '<span class="src ' + cls + '">' + esc(m.label || s.toUpperCase()) + '</span>';
 }
 function hasOfficial(a) {
   const meta = DB.srcmeta || {};
@@ -262,16 +263,39 @@ function cardHTML(a) {
     : '';
   const rate = (a.it && a.it.r)
     ? `<span class="pill rate">★ ${a.it.r.toFixed(1)}</span>` : '';
-  const pills = a.src.map(srcBadge).join('')
-    + (hasOfficial(a) ? '<span class="src s-official">★ OFFICIAL DEV</span>' : '')
+  let pills = '';
+  let repoInfo = '';
+  
+  if (tab === 'repo' && srcFilter !== 'all') {
+    const others = a.src.filter(s => s !== srcFilter);
+    pills = srcBadge(srcFilter, true);
+    if (others.length > 0) {
+      const tooltips = others.map(s => ((DB.srcmeta || {})[s] || {}).label || s.toUpperCase()).join(', ');
+      pills += `<span class="pill" title="${esc(tooltips)}">+${others.length} more</span>`;
+    }
+    
+    // a.vh[srcFilter][0] gives [version, date, url]
+    // a.per[srcFilter] gives build count
+    const vh = (a.vh && a.vh[srcFilter]) ? a.vh[srcFilter][0] : null;
+    const count = (a.per && a.per[srcFilter] != null) ? a.per[srcFilter] : 1;
+    if (vh) {
+      repoInfo = `<div class="d">v${esc(vh[0] || '?')} · updated ${esc(vh[1] || 'unknown')} · ${count} build${count === 1 ? '' : 's'} in this repo</div>`;
+    }
+  } else {
+    pills = a.src.map(s => srcBadge(s)).join('');
+  }
+  
+  pills += (hasOfficial(a) ? '<span class="src s-official">★ OFFICIAL DEV</span>' : '')
     + ((a.upd != null && a.upd <= 30) ? '<span class="src s-fresh">FRESH</span>' : '')
     + (tooNew(a) ? `<span class="src s-noios">⚠ NEEDS iOS ${esc(reqIos(a))}+</span>` : '');
+  
   const tweak = a.tweak ? `<div class="tp">${esc(a.tweak)}</div>` : '';
   const fav = favs.has(a.name);
   return `<div class="card${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
     <div class="badge">${a.n} BUILDS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
     <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" aria-label="${fav ? 'Remove from favorites' : 'Save to favorites'}" aria-pressed="${fav ? 'true' : 'false'}">${fav ? '★' : '☆'}</button></div></div>
     <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
+    ${repoInfo}
     <div class="pd">${pills}</div>
     ${tweak}
     <div class="desc">${esc(a.desc)}</div>
@@ -528,9 +552,9 @@ function installerLink(inst, ipaUrl) {
 }
 function dlRow(a) {
   const parts = [];
-  const mk = (list, src) => {
+  const mk = (list, src, hi = false) => {
     if (!list || !list.length) return;
-    const badge = srcBadge(src);
+    const badge = srcBadge(src, hi);
     const opts = list.map((v, i) => {
       const tipa = v[2].toLowerCase().includes('.tipa') ? ' · TIPA' : '';
       return `<option value="${i}">${esc(v[0] || '?')}${tipa} · ${esc(v[1] || 'undated')}</option>`;
@@ -543,7 +567,17 @@ function dlRow(a) {
         `<button class="gbtn sm vinstbtn" data-vsrc="${src}" data-inst="${k}">${label}</button>`
       ).join('') + `</div>`);
   };
-  Object.keys(a.vh || {}).forEach(src => mk(a.vh[src], src));
+
+  const isRepoView = (tab === 'repo' && srcFilter !== 'all');
+  if (isRepoView && a.vh && a.vh[srcFilter]) {
+    mk(a.vh[srcFilter], srcFilter, true);
+    Object.keys(a.vh || {}).forEach(src => {
+      if (src !== srcFilter) mk(a.vh[src], src, false);
+    });
+  } else {
+    Object.keys(a.vh || {}).forEach(src => mk(a.vh[src], src, false));
+  }
+
   if (!parts.length) return '—';
   return parts.join('') +
     `<div class="dim" style="margin-top:8px">Newest build is pre-selected — open the list to roll back to an older one. ` +
