@@ -707,6 +707,38 @@ function setRepoFilter(key) {
   else if (tab !== 'home') render();
 }
 
+/* ---------- 11b. Repo picker menu: big tappable list of every source ---------- */
+const repoMenu = document.getElementById('repomenu');
+const repoList = document.getElementById('rmlist');
+let repoCounts = null;
+function openRepoMenu() {
+  if (!repoCounts) {
+    repoCounts = {};
+    const all = Object.values(DB.cats).flat();
+    for (const k of Object.keys(DB.repos || {}))
+      repoCounts[k] = all.filter(a => (a.src || []).includes(k)).length;
+  }
+  const meta = DB.srcmeta || {}, repos = DB.repos || {};
+  repoList.innerHTML = Object.keys(repos).map(k => {
+    const m = meta[k] || {};
+    const n = repoCounts[k] || 0, e = (repos[k] || {}).entries || 0;
+    const star = m.official ? ' ★' : '';
+    return `<button class="rrow" data-repo="${esc(k)}">` +
+      `<span class="src ${esc(m.cls || 's-apt')}">${esc(m.label || k.toUpperCase())}</span>` +
+      `<span class="rdim">${n.toLocaleString()} apps · ${e.toLocaleString()} builds${star}</span>` +
+      `<span class="rgo">→</span></button>`;
+  }).join('');
+  repoMenu.classList.add('open');
+}
+function closeRepoMenu() { repoMenu.classList.remove('open'); }
+document.getElementById('repobtn').onclick = openRepoMenu;
+document.getElementById('rmx').onclick = closeRepoMenu;
+repoMenu.addEventListener('click', e => {
+  if (e.target === repoMenu) closeRepoMenu();
+  const row = e.target.closest('.rrow');
+  if (row) { closeRepoMenu(); setRepoFilter(row.dataset.repo); }
+});
+
 /* ---------- 12. Safe sources (guide) ---------- */
 function renderSafeSources() {
   const el = document.getElementById('safesrc');
@@ -822,6 +854,7 @@ if (fl) fl.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  if (e.key === 'Escape' && repoMenu.classList.contains('open')) closeRepoMenu();
   if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
     e.preventDefault();
     document.getElementById('q').focus();

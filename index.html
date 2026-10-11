@@ -188,6 +188,21 @@ h2.sec::before{content:"// "}
 .s-official{color:#000;background:var(--amber);border-color:var(--amber);font-weight:700}
 .empty{color:var(--muted);text-align:center;padding:44px;letter-spacing:1px}
 
+/* ================= repo picker menu ================= */
+#repomenu{position:fixed;inset:0;z-index:400;display:none;align-items:flex-start;
+  justify-content:center;background:rgba(2,4,2,.82);backdrop-filter:blur(3px);
+  padding:12vh 18px 18px;overflow-y:auto}
+#repomenu.open{display:flex}
+.rmbox{width:min(560px,100%);background:#030803;border:1px solid var(--toxic)}
+.rmhead{display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;border-bottom:1px solid var(--border);color:var(--toxic);letter-spacing:2px}
+.rrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;
+  border:none;border-bottom:1px solid #0a140c;padding:12px 16px;color:var(--toxic);
+  cursor:pointer;font:inherit}
+.rrow:hover{background:rgba(57,255,20,.07)}
+.rdim{color:var(--muted);font-size:11.5px;letter-spacing:1px}
+.rgo{margin-left:auto;color:var(--toxic)}
+
 /* ================= modal ================= */
 #modal{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;
   padding:18px;background:rgba(2,4,2,.82);backdrop-filter:blur(3px)}
@@ -544,6 +559,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <h2 class="sec" id="sectitle"></h2>
   <p class="secsub" id="secsub"></p>
   <div class="toolbar" id="toolbar">
+    <button class="gbtn sm" id="repobtn" type="button">☰ REPOS</button>
     <input id="q" type="search" placeholder="&gt; search the horde...  ( / )">
     <select id="sort">
       <option value="alpha">Name A–Z</option>
@@ -575,6 +591,11 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
 </div>
 
 <div id="modal"><div class="mbox" id="mbody"></div></div>
+
+<div id="repomenu"><div class="rmbox">
+  <div class="rmhead"><b>☰ BROWSE REPOS</b><button class="mx" id="rmx" aria-label="Close">✕</button></div>
+  <div id="rmlist"></div>
+</div></div>
 
 <footer><span class="skull">☣</span><br>
 built from alan&#x27;s gigantic repo + apptesters ipa repo + cypwn ipa library + quantum source + quantum plus + accretion + wuxu&#x27;s library++ + sidestore community + altstore official + oatmealdome + utm + ish + flycast — deduped &amp; app-store verified<br>
@@ -1314,6 +1335,38 @@ function setRepoFilter(key) {
   else if (tab !== 'home') render();
 }
 
+/* ---------- 11b. Repo picker menu: big tappable list of every source ---------- */
+const repoMenu = document.getElementById('repomenu');
+const repoList = document.getElementById('rmlist');
+let repoCounts = null;
+function openRepoMenu() {
+  if (!repoCounts) {
+    repoCounts = {};
+    const all = Object.values(DB.cats).flat();
+    for (const k of Object.keys(DB.repos || {}))
+      repoCounts[k] = all.filter(a => (a.src || []).includes(k)).length;
+  }
+  const meta = DB.srcmeta || {}, repos = DB.repos || {};
+  repoList.innerHTML = Object.keys(repos).map(k => {
+    const m = meta[k] || {};
+    const n = repoCounts[k] || 0, e = (repos[k] || {}).entries || 0;
+    const star = m.official ? ' ★' : '';
+    return `<button class="rrow" data-repo="${esc(k)}">` +
+      `<span class="src ${esc(m.cls || 's-apt')}">${esc(m.label || k.toUpperCase())}</span>` +
+      `<span class="rdim">${n.toLocaleString()} apps · ${e.toLocaleString()} builds${star}</span>` +
+      `<span class="rgo">→</span></button>`;
+  }).join('');
+  repoMenu.classList.add('open');
+}
+function closeRepoMenu() { repoMenu.classList.remove('open'); }
+document.getElementById('repobtn').onclick = openRepoMenu;
+document.getElementById('rmx').onclick = closeRepoMenu;
+repoMenu.addEventListener('click', e => {
+  if (e.target === repoMenu) closeRepoMenu();
+  const row = e.target.closest('.rrow');
+  if (row) { closeRepoMenu(); setRepoFilter(row.dataset.repo); }
+});
+
 /* ---------- 12. Safe sources (guide) ---------- */
 function renderSafeSources() {
   const el = document.getElementById('safesrc');
@@ -1429,6 +1482,7 @@ if (fl) fl.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  if (e.key === 'Escape' && repoMenu.classList.contains('open')) closeRepoMenu();
   if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
     e.preventDefault();
     document.getElementById('q').focus();
