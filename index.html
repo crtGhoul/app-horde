@@ -337,7 +337,7 @@ footer .skull{color:var(--blood);font-size:15px}
 </div>
 
 <nav class="tabs"><div class="wrap">
-  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide">[guide]</button><button class="tab active" data-t="home">[home]</button><button class="tab" data-t="faves">[faves]</button><button class="tab" data-t="top25">[top 25]</button><button class="tab" id="searchtab">[search]</button>
+  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide">[guide]</button><button class="tab active" data-t="home">[home]</button><button class="tab" data-t="faves">[faves]</button><button class="tab" data-t="top25">[top 25]</button><button class="tab" id="searchtab">[search]</button><button class="tab" id="navrepobtn">[repos]</button>
 </div></nav>
 
 <div class="wrap">
@@ -1461,6 +1461,8 @@ if (myiosEl) {
 }
 document.querySelectorAll('.tab').forEach(b =>
   b.onclick = () => setTab(b.dataset.t));
+// [repos] tab: repo picker menu, not a tab switch — override the generic handler
+document.getElementById('navrepobtn').onclick = () => openRepoMenu();
 // [search] tab: jump to the toolbar and focus the search field
 document.getElementById('searchtab').onclick = () => {
   if (tab === 'guide') setTab('home');

@@ -833,6 +833,8 @@ if (myiosEl) {
 }
 document.querySelectorAll('.tab').forEach(b =>
   b.onclick = () => setTab(b.dataset.t));
+// [repos] tab: repo picker menu, not a tab switch — override the generic handler
+document.getElementById('navrepobtn').onclick = () => openRepoMenu();
 // [search] tab: jump to the toolbar and focus the search field
 document.getElementById('searchtab').onclick = () => {
   if (tab === 'guide') setTab('home');
