@@ -50,6 +50,9 @@ SOURCES = {
     "accretion":   dict(label="Accretion", short="Accretion",
                         url="https://getaccretion.github.io/source.json",
                         cls="s-acc", official=False),
+    "ipaomtk":     dict(label="IPAOMTK", short="IPAOMTK",
+                        url="https://ipaomtk.com",
+                        cls="s-mtk", official=False, direct=False),
     "wuxu":        dict(label="WuXu's Library++", short="WuXu's",
                         url="https://wuxu1.github.io/wuxu-complete-plus.json",
                         cls="s-wuxu", official=False),
@@ -243,6 +246,133 @@ def fetch_json(url, timeout=60, retries=3):
     raise last
 
 
+IPAOMTK_API = "https://ipaomtk.com/wp-json/wp/v2/posts"
+IPAOMTK_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) APP_HORDE-build/1.0"
+
+
+def _ipaomtk_get(url, timeout=30, retries=3):
+    """GET a URL with retries; returns raw bytes. Raises on final failure."""
+    last = None
+    for attempt in range(retries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": IPAOMTK_UA})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except Exception as e:
+            last = e
+            time.sleep(1 + attempt)
+    raise last
+
+
+def _ipaomtk_dl_info(slug):
+    """Scrape one ipaomtk download page.
+
+    Returns (ipa_url, meta) where meta holds the JSON-LD name/version/date.
+    (None, {}) when the page has no direct IPA link (news posts, etc.)."""
+    html = _ipaomtk_get(f"https://ipaomtk.com/{slug}/download/").decode("utf-8", "ignore")
+    ipa = None
+    for u in re.findall(r'(?:href|src)="([^"]+)"', html):
+        if u.lower().split("?")[0].endswith(".ipa"):
+            if "file.ipaomtk.com" in u:
+                ipa = u
+                break
+            if ipa is None:
+                ipa = u
+    meta = {}
+    m = re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.S)
+    if m:
+        try:
+            meta = json.loads(m.group(1))
+        except Exception:
+            meta = {}
+    return ipa, meta
+
+
+def fetch_ipaomtk(snap_path):
+    """Crawl ipaomtk.com (WordPress): post list via wp-json, then each post's
+    /download/ page for the direct IPA URL + JSON-LD metadata.
+
+    Incremental: the snapshot keeps each post's `modified` stamp, so weekly
+    refreshes only re-fetch pages for new/changed posts. Returns an
+    AltStore-shaped {"apps": [...]} dict, the same shape the other
+    snapshots use, so the normal pipeline consumes it untouched."""
+    old = {}
+    if os.path.exists(snap_path):
+        try:
+            old = {a["slug"]: a for a in
+                   json.load(open(snap_path, encoding="utf-8")).get("apps", [])
+                   if a.get("slug")}
+        except Exception:
+            old = {}
+    posts = []
+    page = 1
+    while True:
+        data = json.loads(_ipaomtk_get(
+            f"{IPAOMTK_API}?per_page=100&page={page}&_fields=slug,title,modified"))
+        if not data:
+            break
+        posts.extend(data)
+        if len(data) < 100:
+            break
+        page += 1
+    print(f"  ipaomtk: {len(posts)} posts listed", flush=True)
+    todo = [p for p in posts
+            if p["slug"] not in old or old[p["slug"]].get("modified") != p.get("modified")]
+    print(f"  ipaomtk: {len(todo)} new/changed download pages to fetch", flush=True)
+
+    fresh = {}
+    if todo:
+        from concurrent.futures import ThreadPoolExecutor
+
+        def work(p):
+            try:
+                ipa, meta = _ipaomtk_dl_info(p["slug"])
+            except Exception:
+                return None
+            if not ipa:
+                return None
+            name = str(meta.get("name") or "").split("|")[0].strip()
+            name = re.sub(r"\s+IPA\s*$", "", name, flags=re.I).strip() or p["slug"]
+            return dict(
+                slug=p["slug"], modified=p.get("modified"),
+                name=name, bundleIdentifier="",
+                developerName="IPAOMTK",
+                version=str(meta.get("softwareVersion") or "").lstrip("vV").strip(),
+                versionDate=(meta.get("dateModified") or "")[:10],
+                downloadURL=ipa,
+                iconURL=str(meta.get("thumbnailUrl") or ""),
+                localizedDescription="",
+            )
+
+        def _save_checkpoint(collected):
+            slugs = {p["slug"] for p in posts}
+            apps = [a for s, a in old.items() if s in slugs and s not in collected]
+            apps.extend(collected.values())
+            tmp = snap_path + ".part"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump({"apps": apps}, fh)
+            os.replace(tmp, snap_path)
+
+        with ThreadPoolExecutor(max_workers=10) as ex:
+            for i, rec in enumerate(ex.map(work, todo)):
+                if rec:
+                    fresh[rec["slug"]] = rec
+                if (i + 1) % 500 == 0:
+                    print(f"  ipaomtk: {i + 1}/{len(todo)} pages", flush=True)
+                    _save_checkpoint(fresh)
+            _save_checkpoint(fresh)
+
+    slugs = {p["slug"] for p in posts}
+    apps = [a for s, a in old.items() if s in slugs and s not in fresh]
+    apps.extend(fresh.values())
+    out = {"apps": apps}
+    os.makedirs(os.path.dirname(snap_path), exist_ok=True)
+    with open(snap_path, "w", encoding="utf-8") as fh:
+        json.dump(out, fh)
+    print(f"  ipaomtk: snapshot holds {len(apps)} apps", flush=True)
+    return out
+
+
 def load_sources(offline):
     """Fetch every configured source (or reuse snapshots in --offline mode).
 
@@ -253,7 +383,14 @@ def load_sources(offline):
     for key, meta in SOURCES.items():
         snap = os.path.join(SOURCES_DIR, key + ".json")
         try:
-            if offline and os.path.exists(snap):
+            if key == "ipaomtk":
+                # WordPress crawl, not a JSON feed (see fetch_ipaomtk)
+                if offline and os.path.exists(snap):
+                    with open(snap, encoding="utf-8") as fh:
+                        data = json.load(fh)
+                else:
+                    data = fetch_ipaomtk(snap)
+            elif offline and os.path.exists(snap):
                 with open(snap, encoding="utf-8") as fh:
                     data = json.load(fh)
             else:
@@ -805,12 +942,15 @@ def render(db, verified, out_path):
         f'<div class="tile" data-t="{c}"><b>{len(db["cats"][c]):,}</b>'
         f'<span>{c.lower()}</span></div>' for c in CATS)
 
+    # sources pasteable straight into AltStore/SideStore (ipaomtk is a
+    # WordPress site, not an AltStore feed — indexed, but not pasteable)
+    direct = [k for k in db["repos"] if SOURCES[k].get("direct", True)]
     src_rows = "".join(
         f'  <div class="bid"><code>{esc_h(SOURCES[k]["url"])}</code>'
         f'<button class="cpy" data-c="{esc_h(SOURCES[k]["url"])}">COPY</button></div>\n'
-        for k in db["repos"])
+        for k in direct)
     dim_bits = []
-    for k in db["repos"]:
+    for k in direct:
         star = "★ " if SOURCES[k]["official"] else ""
         dim_bits.append(f"{star}{SOURCES[k]['label']} ({db['repos'][k]['entries']:,} builds)")
     dim_line = ("  <p class=\"dim\">★ = official developer source — straight from the app "
@@ -834,7 +974,7 @@ def render(db, verified, out_path):
         "{{STAT_STRAINS}}": f"{total:,}",
         "{{STAT_SOURCES}}": str(nsrc),
         "{{TILES}}": f'    <div class="tiles">{tiles}</div>',
-        "{{GUIDE_SRC_INTRO}}": (f"AltStore and SideStore can browse these {nsrc} repos directly. "
+        "{{GUIDE_SRC_INTRO}}": (f"AltStore and SideStore can browse these {len(direct)} repos directly. "
                                 f"Go to the <b>Sources</b> tab, tap <b>+</b>, and paste these:"),
         "{{GUIDE_SRC_ROWS}}": src_rows + dim_line,
         "{{GUIDE_DISCLAIMER_SRC}}": (f"Every ⬇ GET button hands you a file from one of the "
