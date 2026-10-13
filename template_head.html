@@ -305,6 +305,36 @@ footer .skull{color:var(--blood);font-size:15px}
 .fix span{color:var(--muted);font-size:12.5px;line-height:1.65;display:block}
 .fix span b{display:inline;color:var(--toxic);font-size:12.5px;margin:0}
 
+/* ================= editors' choice rail ================= */
+#currail{display:flex;gap:10px;overflow-x:auto;padding:6px 2px;margin:8px 0 4px}
+.ecard{flex:0 0 230px;border:1px solid var(--border);background:var(--dim);
+  padding:12px;cursor:pointer}
+.ecard:hover{border-color:var(--toxic);box-shadow:0 0 14px rgba(57,255,20,.2)}
+.ecard .eic{width:42px;height:42px;object-fit:cover;border:1px solid var(--border);background:#000}
+.ecard b{display:block;color:var(--toxic);font-size:13.5px;margin:8px 0 4px}
+.ecard p{color:var(--muted);font-size:12px;line-height:1.55;margin:0}
+/* ================= download version changelog ================= */
+.vlog{font-size:11.5px;color:var(--muted);font-style:italic;margin:-4px 0 10px;
+  line-height:1.5;max-width:520px}
+.vlog::before{content:"» "}
+.vdead{background:none;border:1px solid var(--border);color:var(--muted);
+  font-family:inherit;font-size:12px;padding:5px 9px;cursor:pointer}
+.vdead:hover{color:var(--blood);border-color:var(--blood)}
+/* ================= per-installer mini guides ================= */
+.iguide{margin:10px 0 4px;font-size:12.5px}
+.iguide summary{cursor:pointer;color:var(--toxic);letter-spacing:1px;font-size:12px}
+.iguide summary:hover{text-decoration:underline}
+.iguide b{color:var(--amber);font-size:12px;letter-spacing:1px}
+.iguide ol{margin:6px 0 12px;padding-left:20px;color:var(--muted);line-height:1.7}
+/* ================= favorites radar banner ================= */
+#favradar{border:1px solid var(--amber);background:rgba(255,176,0,.06);
+  padding:12px 16px;margin:14px 0 4px;font-size:13px;color:var(--text);line-height:1.6}
+#favradar b{color:var(--amber);letter-spacing:1px}
+#favradar a{color:var(--toxic);cursor:pointer;text-decoration:underline}
+#favradar .rdx{float:right;background:none;border:1px solid var(--border);
+  color:var(--muted);font-family:inherit;font-size:11px;padding:3px 9px;cursor:pointer}
+#favradar .rdx:hover{color:var(--blood);border-color:var(--blood)}
+
 /* ================= mobile autopsy: lighter on small screens ================= */
 @media (max-width: 640px) {
   .glitch::before, .glitch::after { animation: none; opacity: 0; }
@@ -338,7 +368,7 @@ footer .skull{color:var(--blood);font-size:15px}
 </div>
 
 <nav class="tabs"><div class="wrap">
-  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide">[guide]</button><button class="tab active" data-t="home">[home]</button><button class="tab" data-t="faves">[faves]</button><button class="tab" data-t="top25">[top 25]</button><button class="tab" id="searchtab">[search]</button><button class="tab" id="navrepobtn">[repos]</button>
+  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide">[guide]</button><button class="tab active" data-t="home">[home]</button><button class="tab" data-t="faves">[faves]</button><button class="tab" data-t="top25">[top 25]</button><button class="tab" id="searchtab">[search]</button><button class="tab" id="navrepobtn">[repos]</button><button class="tab" data-t="installer">[installer]</button>
 </div></nav>
 
 <div class="wrap">
@@ -364,6 +394,9 @@ footer .skull{color:var(--blood);font-size:15px}
     <h2 class="sec">fresh drops<a class="rsslink" href="fresh.xml" title="RSS feed — new builds, refreshed every monday">RSS</a></h2>
     <p class="secsub" id="freshsub">// …</p>
     <div id="freshlist"></div>
+    <h2 class="sec">editors' choice</h2>
+    <p class="secsub">// hand-picked by the horde keeper</p>
+    <div id="currail"></div>
     <h2 class="sec">browse categories</h2>
     {{TILES}}
     <h2 class="sec">browse repos</h2>
@@ -529,6 +562,21 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <p><b>⑦ Nothing here proves safety.</b> These checks catch fakes and sloppiness, not a well-made trojan. If an app asks for permissions or logins it shouldn't need, delete it.</p>
 </div>
 </div>
+
+  <div id="instpanels" style="display:none">
+    <header class="hero">
+      <h1 class="glitch" data-t="IPA INSTALLER">IPA INSTALLER</h1>
+      <p>Paste any direct .ipa link and get one-tap install buttons for every installer.
+         No repo needed — if the URL serves an .ipa, this builds the deep links.</p>
+    </header>
+    <div class="gbox">
+      <div class="toolbar" style="position:static;margin:0 0 12px;padding:0;background:none">
+        <input id="ipaurl" type="url" placeholder="paste any .ipa url — https://…" autocomplete="off" spellcheck="false">
+        <button class="gbtn" id="instbuild" type="button">BUILD ⏎</button>
+      </div>
+      <div id="instout"><p class="dim">// links appear here — nothing is uploaded, everything happens on your device</p></div>
+    </div>
+  </div>
 
   <h2 class="sec" id="sectitle"></h2>
   <p class="secsub" id="secsub"></p>

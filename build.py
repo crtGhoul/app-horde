@@ -250,6 +250,22 @@ IPAOMTK_API = "https://ipaomtk.com/wp-json/wp/v2/posts"
 IPAOMTK_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) APP_HORDE-build/1.0"
 
 
+def _ipaomtk_get_curl(url, timeout=30):
+    """GET via curl subprocess; returns raw bytes. Raises on failure.
+
+    curl fallback because Python-urllib fetches to ipaomtk.com intermittently
+    die with IncompleteRead(0 bytes read) through the egress proxy while
+    curl succeeds (2026-10-13)."""
+    import subprocess
+    out = subprocess.run(
+        ["curl", "-sL", "-m", str(timeout), "-A", IPAOMTK_UA, url],
+        capture_output=True, timeout=timeout + 10)
+    if out.returncode != 0 or not out.stdout:
+        raise RuntimeError(f"curl failed rc={out.returncode} "
+                           f"err={out.stderr[:120]!r}")
+    return out.stdout
+
+
 def _ipaomtk_get(url, timeout=30, retries=3):
     """GET a URL with retries; returns raw bytes. Raises on final failure."""
     last = None
@@ -260,6 +276,13 @@ def _ipaomtk_get(url, timeout=30, retries=3):
                 return r.read()
         except Exception as e:
             last = e
+            # urllib is flaky against ipaomtk through the proxy — try curl
+            # before the next backoff sleep so one bad attempt doesn't stall
+            # the whole crawl.
+            try:
+                return _ipaomtk_get_curl(url, timeout)
+            except Exception as ce:
+                last = ce
             time.sleep(1 + attempt)
     raise last
 
@@ -444,6 +467,20 @@ def clean_name(name):
     return cleaned or name
 
 
+def parse_size(a, v):
+    """Build size in bytes: version-level `size`, else app-level. 0 when missing."""
+    for val in (v.get("size"), a.get("size")):
+        if val is None:
+            continue
+        try:
+            n = int(val)
+        except (TypeError, ValueError):
+            continue
+        if n > 0:
+            return n
+    return 0
+
+
 def iter_builds(key, meta, apps):
     """Yield flat build records from one source's app list."""
     for a in apps:
@@ -485,7 +522,10 @@ def iter_builds(key, meta, apps):
             rec.update(bundle=vbundle,
                        version=str(v.get("version") or a.get("version") or "").strip(),
                        date=norm_date(v.get("date") or v.get("versionDate") or a.get("versionDate") or a.get("fullDate")),
-                       text=text[:500], url=url)
+                       text=text[:500], url=url,
+                       cl=clean_text(v.get("localizedDescription"),
+                                     v.get("versionDescription"))[:300],
+                       size=parse_size(a, v))
             yield rec
 
 
@@ -790,7 +830,10 @@ def build_db(fetched, seed, old_db):
         for r in recs:
             lst = vh.setdefault(r["src"], [])
             if len(lst) < VH_CAP and r["url"]:
-                lst.append([r["version"], r["date"], r["url"]])
+                entry = [r["version"], r["date"], r["url"]]
+                if r.get("cl"):
+                    entry.append(r["cl"])  # optional 4th element: changelog
+                lst.append(entry)
         dl = {s: v[0][2] for s, v in vh.items() if v}
 
         minos = ""
@@ -830,10 +873,33 @@ def build_db(fetched, seed, old_db):
             "variants": variants, "dl": dl, "vh": vh,
             "minos": minos, "risk": risk,
         }
+        sz = max((r.get("size") or 0 for r in recs), default=0)
+        if sz:
+            rec["sz"] = sz
         vt = vt_verdict(vt_cache, rec)
         if vt:
             rec["vt"] = vt
         apps.append(rec)
+
+    # editors' choice rail: resolve curated.json names against the index
+    curated_entries = []
+    try:
+        with open(os.path.join(HERE, "curated.json"), encoding="utf-8") as fh:
+            curated_entries = json.load(fh)
+    except Exception as e:
+        print(f"  ! curated.json unreadable: {e}", flush=True)
+    app_by_norm = {norm_name(a["name"]): a for a in apps}
+    curated = []
+    for e in curated_entries:
+        if not isinstance(e, dict):
+            continue
+        a = app_by_norm.get(norm_name(str(e.get("name") or "")))
+        if a:
+            curated.append({"name": a["name"],
+                            "blurb": str(e.get("blurb") or "")[:160],
+                            "icon": a.get("icon") or "",
+                            "n": a["n"]})
+    print(f"  curated: {len(curated)}/{len(curated_entries)} matched", flush=True)
 
     apps.sort(key=lambda a: (-a["n"], a["name"].lower()))
     cats = {c: [] for c in CATS}
@@ -858,6 +924,7 @@ def build_db(fetched, seed, old_db):
         "unique": len(apps),
         "nsources": len(fetched),
         "repos": repos,
+        "curated": curated,
         "srcmeta": {k: {"label": SOURCES[k]["short"].upper(),
                         "cls": SOURCES[k]["cls"],
                         "official": SOURCES[k]["official"]}
@@ -1007,13 +1074,84 @@ def render(db, verified, out_path):
 
 
 # ---------------------------------------------------------------- main -----
+def check_link_health(db, cap=400, cache_path=None):
+    """HEAD-check the newest build URL per (app, source); cache results.
+
+    Cache: link_health.json {url: {"ok": bool, "ts": "YYYY-MM-DD"}}.
+    URLs checked within 30 days are skipped. At most `cap` fresh probes
+    per run (ThreadPoolExecutor, 8s timeout each; HEAD first, then a
+    1-byte Range GET for servers that reject HEAD). Never raises — the
+    caller treats it as best-effort.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    cache_path = cache_path or os.path.join(HERE, "link_health.json")
+    try:
+        with open(cache_path, encoding="utf-8") as fh:
+            cache = json.load(fh)
+        if not isinstance(cache, dict):
+            cache = {}
+    except Exception:
+        cache = {}
+    today = date.today()
+
+    def fresh(ts):
+        try:
+            return (today - datetime.strptime(ts, "%Y-%m-%d").date()).days < 30
+        except Exception:
+            return False
+
+    urls = set()
+    for apps in db["cats"].values():
+        for a in apps:
+            for lst in (a.get("vh") or {}).values():
+                if lst and len(lst[0]) > 2 and lst[0][2]:
+                    urls.add(lst[0][2])
+    todo = [u for u in sorted(urls)
+            if not (isinstance(cache.get(u), dict) and fresh(cache[u].get("ts", "")))]
+    todo = todo[:cap]
+    print(f"  link health: {len(urls):,} urls cached-checked, "
+          f"{len(todo)} to probe (cap {cap})", flush=True)
+    if not todo:
+        return cache
+
+    def probe(u):
+        for method in ("HEAD", "GET"):
+            try:
+                headers = {"User-Agent": "APP_HORDE-build/1.0"}
+                if method == "GET":
+                    headers["Range"] = "bytes=0-0"
+                req = urllib.request.Request(u, method=method, headers=headers)
+                with urllib.request.urlopen(req, timeout=8) as r:
+                    code = r.getcode()
+                    return (u, 200 <= code < 400)
+            except Exception:
+                continue
+        return (u, False)
+
+    okc = badc = 0
+    with ThreadPoolExecutor(max_workers=10) as ex:
+        for u, ok in ex.map(probe, todo):
+            cache[u] = {"ok": ok, "ts": today.isoformat()}
+            okc += ok
+            badc += (not ok)
+    try:
+        with open(cache_path, "w", encoding="utf-8") as fh:
+            json.dump(cache, fh)
+    except Exception as e:
+        print(f"  ! link_health write failed: {e}", flush=True)
+    print(f"  link health: {okc} ok, {badc} dead", flush=True)
+    return cache
+
+
 def main():
-    """CLI: build.py [--offline] [--out <path>].
+    """CLI: build.py [--offline] [--out <path>] [--skip-link-check].
 
     --offline reuses sources/*.json snapshots instead of downloading.
     --out    output path (default: index.html next to this script).
+    --skip-link-check  bypass the post-render dead-link health probe.
     """
     offline = "--offline" in sys.argv
+    skip_link = "--skip-link-check" in sys.argv
     out = "index.html"
     if "--out" in sys.argv:
         i = sys.argv.index("--out")
@@ -1034,6 +1172,15 @@ def main():
           f"verified={verified:,}", flush=True)
     digest = render(db, verified, out)
     write_rss(db)
+    if not offline and not skip_link:
+        try:
+            check_link_health(db)
+        except Exception as e:
+            print(f"  ! link health check failed (non-fatal): {e}", flush=True)
+    elif offline:
+        print("  link check skipped (offline)", flush=True)
+    else:
+        print("  link check skipped (--skip-link-check)", flush=True)
     print(f"DONE db_hash={digest}")
 
 

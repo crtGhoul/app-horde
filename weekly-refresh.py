@@ -68,7 +68,7 @@ def main():
     # 3. push via git-database API (same route as the manual pushes)
     files = ["index.html", "fresh.xml", "build.py", "template_head.html",
              "template_tail.html", "weekly-refresh.py", "vt-scan.py",
-             "vt_cache.json"]
+             "vt_cache.json", "curated.json", "link_health.json"]
     today = datetime.date.today().isoformat()
     commit_sha, _ = gh_push.push_tree(
         HERE, files,

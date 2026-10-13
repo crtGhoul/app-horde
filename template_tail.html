@@ -20,6 +20,13 @@ function daysLabel(d) {
   if (d === 1) return 'yesterday';
   return d + ' days ago';
 }
+/* fmtSize: build file size in bytes -> "228.4 MB". */
+function fmtSize(b) {
+  if (b == null || b <= 0) return '';
+  if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
+  if (b >= 1e6) return (b / 1e6).toFixed(1) + ' MB';
+  return Math.max(1, Math.round(b / 1e3)) + ' KB';
+}
 /* Icon fallback chain: repo icon -> App Store artwork -> hidden. */
 function imgFallback(el) {
   const fb = el.getAttribute('data-fb');
@@ -143,12 +150,13 @@ function setTab(t, keepHash = false) {
   if (qi && qi.value) qi.value = '';
   document.querySelectorAll('.tab').forEach(b =>
     b.classList.toggle('active', b.dataset.t === t));
-  const guide = t === 'guide';
+  const guide = t === 'guide', inst = t === 'installer';
   document.getElementById('guidepanels').style.display = guide ? 'block' : 'none';
-  sectTitle.style.display = guide ? 'none' : '';
-  secSub.style.display = guide ? 'none' : '';
-  document.getElementById('toolbar').style.display = guide ? 'none' : '';
-  if (guide) {
+  document.getElementById('instpanels').style.display = inst ? 'block' : 'none';
+  sectTitle.style.display = (guide || inst) ? 'none' : '';
+  secSub.style.display = (guide || inst) ? 'none' : '';
+  document.getElementById('toolbar').style.display = (guide || inst) ? 'none' : '';
+  if (guide || inst) {
     grid.style.display = 'none'; emptyMsg.style.display = 'none';
     document.getElementById('homepanels').style.display = 'none';
     window.scrollTo(0, 0);
@@ -263,6 +271,7 @@ function cardHTML(a) {
     : '';
   const rate = (a.it && a.it.r)
     ? `<span class="pill rate">★ ${a.it.r.toFixed(1)}</span>` : '';
+  const szpill = a.sz ? `<span class="pill">${fmtSize(a.sz)}</span>` : '';
   let pills = '';
   let repoInfo = '';
   
@@ -293,7 +302,7 @@ function cardHTML(a) {
   const fav = favs.has(a.name);
   return `<div class="card${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
     <div class="badge">${a.n} BUILDS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
-    <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" aria-label="${fav ? 'Remove from favorites' : 'Save to favorites'}" aria-pressed="${fav ? 'true' : 'false'}">${fav ? '★' : '☆'}</button></div></div>
+    <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}${szpill}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" aria-label="${fav ? 'Remove from favorites' : 'Save to favorites'}" aria-pressed="${fav ? 'true' : 'false'}">${fav ? '★' : '☆'}</button></div></div>
     <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
     ${repoInfo}
     <div class="pd">${pills}</div>
@@ -395,8 +404,16 @@ function saveFavs() {
   catch (e) { /* non-fatal */ }
 }
 function toggleFav(name) {
-  if (favs.has(name)) favs.delete(name); else favs.add(name);
+  if (favs.has(name)) {
+    favs.delete(name);
+    delete favseen[name];
+  } else {
+    favs.add(name);
+    const hit = appIndex.get(name);
+    if (hit && hit.app.upd != null) favseen[name] = hit.app.upd;
+  }
   saveFavs();
+  saveFavseen();
   syncFavUI();
 }
 function syncFavUI() {
@@ -424,6 +441,43 @@ function favApps() {
   Object.values(DB.cats).forEach(arr =>
     arr.forEach(x => { if (favs.has(x.name)) out.push(x); }));
   return out;
+}
+/* ---------- 9b. Favorites update radar ----------
+   horde_favseen: {appName: updDays} — the freshness each favorite had when
+   last seen (set when starred, refreshed when its intel modal is opened).
+   A strictly smaller upd today means a newer build landed since. */
+let favseen = {};
+try { favseen = JSON.parse(localStorage.getItem('horde_favseen') || '{}'); }
+catch (e) { /* private mode etc. */ }
+function saveFavseen() {
+  try { localStorage.setItem('horde_favseen', JSON.stringify(favseen)); }
+  catch (e) { /* non-fatal */ }
+}
+function paintFavRadar() {
+  const old = document.getElementById('favradar');
+  if (old) old.remove();
+  try { if (sessionStorage.getItem('horde_radardx')) return; } catch (e) {}
+  let n = 0;
+  for (const nm of favs) {
+    const hit = appIndex.get(nm);
+    if (!hit) continue;
+    const a = hit.app;
+    if (a.upd != null && favseen[nm] != null && a.upd < favseen[nm]) n++;
+  }
+  if (!n) return;
+  const hp = document.getElementById('homepanels');
+  if (!hp) return;
+  const d = document.createElement('div');
+  d.id = 'favradar';
+  d.innerHTML = `<button class="rdx" aria-label="dismiss">\u2715</button>` +
+    `<b>\u2623 RADAR:</b> ${n} of your starred apps have new builds \u2014 ` +
+    `<a id="rgoview">view them \u2192</a>`;
+  hp.insertBefore(d, hp.firstChild);
+  d.querySelector('.rdx').onclick = () => {
+    try { sessionStorage.setItem('horde_radardx', '1'); } catch (e) {}
+    d.remove();
+  };
+  d.querySelector('#rgoview').onclick = e => { e.preventDefault(); setTab('faves'); };
 }
 
 /* ---------- 10. Intel modal ---------- */
@@ -550,6 +604,34 @@ function installerLink(inst, ipaUrl) {
   // iOS Safari drops raw custom schemes — bounce through an https redirector
   return REDIRECTOR + encodeURIComponent(deep);
 }
+/* Per-installer 3-step mini guides, rendered inside the modal's DOWNLOAD row. */
+const INSTALL_GUIDES = {
+  altstore: [
+    'On your computer, install AltServer, then use it to install AltStore onto your iPhone.',
+    'On the iPhone: Settings \u2192 General \u2192 VPN & Device Management \u2192 trust the profile. On iOS 16+, also flip on Developer Mode under Settings \u2192 Privacy & Security.',
+    'Tap the AltStore button above \u2014 AltStore opens with the app ready to install.',
+  ],
+  sidestore: [
+    "Do SideStore's one-time setup from a computer (see sidestore.io), which installs SideStore on your iPhone.",
+    'Trust the profile in Settings \u2192 General \u2192 VPN & Device Management.',
+    'Tap the SideStore button above \u2014 SideStore opens with the app ready to install.',
+  ],
+  trollstore: [
+    'TrollStore only works on iOS 14.0\u201317.0. Check yours at Settings \u2192 General \u2192 About first.',
+    "In TrollStore's settings, enable the URL scheme option so install links open correctly.",
+    'Tap the TrollStore button above \u2014 the app installs permanently, no refresh needed.',
+  ],
+  feather: [
+    'Open Feather on your iPhone and import a signing certificate.',
+    'Tap the Feather button above \u2014 the .ipa opens inside Feather.',
+    'Sign and install it from within Feather, then trust the profile if iOS asks.',
+  ],
+  livecontainer: [
+    'Install LiveContainer on your iPhone (3.6.65+ if you are on iOS 26.4+).',
+    'Tap the LiveContainer button above \u2014 the app opens inside LiveContainer.',
+    'It runs as a guest app inside LiveContainer, so no certificate or signing is needed.',
+  ],
+};
 function dlRow(a) {
   const parts = [];
   const mk = (list, src, hi = false) => {
@@ -561,7 +643,9 @@ function dlRow(a) {
     }).join('');
     parts.push(`<div class="vsrc">${badge}` +
       `<select data-vsrc="${src}" aria-label="pick a build">${opts}</select>` +
-      `<button class="gbtn sm vget" data-vsrc="${src}">⬇ GET</button></div>` +
+      `<button class="gbtn sm vget" data-vsrc="${src}">⬇ GET</button>` +
+      `<button class="vdead" data-vsrc="${src}" title="report dead link">⚠</button></div>` +
+      `<div class="vlog" data-vsrc="${src}" style="display:none"></div>` +
       `<div class="vinst"><span class="dim">one-tap install:</span>` +
       INSTS.map(([k, label]) =>
         `<button class="gbtn sm vinstbtn" data-vsrc="${src}" data-inst="${k}">${label}</button>`
@@ -579,10 +663,14 @@ function dlRow(a) {
   }
 
   if (!parts.length) return '—';
+  const guideHtml = `<details class="iguide"><summary>how to install</summary>` +
+    INSTS.map(([k, label]) => `<b>${label}</b><ol>` +
+      (INSTALL_GUIDES[k] || []).map(s => `<li>${esc(s)}</li>`).join('') +
+      `</ol>`).join('') + `</details>`;
   return parts.join('') +
     `<div class="dim" style="margin-top:8px">Newest build is pre-selected — open the list to roll back to an older one. ` +
     `TIPA builds are for TrollStore. Pick a build, then tap your installer above for one-tap install. No installer? ⬇ GET downloads the file — open it in Scarlet manually. ` +
-    `Unofficial build — verify the bundle ID and source before installing.</div>`;
+    `Unofficial build — verify the bundle ID and source before installing.</div>` + guideHtml;
 }
 
 /* pushHash=false when opened from a deep link, so we don't rewrite the
@@ -609,6 +697,7 @@ function openModal(name, sector, pushHash = true) {
     ${row('VERIFICATION', verifyRow(a))}
     ${row('VIRUSTOTAL', vtRow(a))}
     ${row('UPDATED', updatedRow(a))}
+    ${a.sz ? row('SIZE', fmtSize(a.sz)) : ''}
     ${row('BUILDS INDEXED', a.n + ' build' + (a.n === 1 ? '' : 's'))}
     ${a.tweak ? row('TWEAKS', esc(a.tweak)) : ''}
     ${row('BUNDLE IDS', bundles || '—')}
@@ -639,6 +728,40 @@ function openModal(name, sector, pushHash = true) {
       if (v && v[2]) window.location.href = installerLink(btn.dataset.inst, v[2]);
     };
   });
+  /* changelog line under each version picker: vh entries are
+     [version, date, url, changelog?] — the 4th element is optional */
+  const updVlog = sel => {
+    const src = sel.dataset.vsrc;
+    const box = mbody.querySelector('.vlog[data-vsrc="' + src + '"]');
+    const v = (a.vh[src] || [])[+sel.value];
+    const cl = (v && v[3]) || '';
+    if (box) {
+      if (cl) {
+        box.style.display = '';
+        box.textContent = cl.length > 160 ? cl.slice(0, 160) + '\u2026' : cl;
+      } else box.style.display = 'none';
+    }
+  };
+  mbody.querySelectorAll('select[data-vsrc]').forEach(sel => {
+    sel.addEventListener('change', () => updVlog(sel));
+    updVlog(sel);
+  });
+  /* dead-link reporter: pre-filled GitHub issue per app/source/version */
+  mbody.querySelectorAll('.vdead').forEach(btn => {
+    btn.onclick = () => {
+      const src = btn.dataset.vsrc;
+      const sel = mbody.querySelector('select[data-vsrc="' + src + '"]');
+      const v = (a.vh[src] || [])[+(sel ? sel.value : 0)];
+      const title = 'dead link: ' + a.name + ' ' + src + ' ' + ((v && v[0]) || '');
+      const body = 'app: ' + a.name + '\nsource: ' + src + '\nversion: ' +
+        ((v && v[0]) || '') + '\nurl: ' + ((v && v[2]) || '') +
+        '\n(reported from app-horde)';
+      window.open('https://github.com/crtGhoul/app-horde/issues/new?title=' +
+        encodeURIComponent(title) + '&body=' + encodeURIComponent(body), '_blank');
+    };
+  });
+  /* radar: opening the intel counts as "seen" at the current freshness */
+  if (a.upd != null) { favseen[a.name] = a.upd; saveFavseen(); }
   syncFavUI();
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -689,6 +812,7 @@ function enterRepo(key) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   document.getElementById('homepanels').style.display = 'none';
   document.getElementById('guidepanels').style.display = 'none';
+  document.getElementById('instpanels').style.display = 'none';
   document.getElementById('toolbar').style.display = '';
   grid.style.display = 'grid';
   emptyMsg.style.display = 'none';
@@ -757,6 +881,70 @@ function renderSafeSources() {
     ` ${r.entries.toLocaleString()} apps indexed.</span></div>`).join('');
 }
 
+/* ---------- 12b. Universal IPA installer page ----------
+   Paste any direct .ipa URL -> one-tap deep-links for every installer,
+   reusing installerLink() + INSTS. Nothing is uploaded anywhere. */
+function buildInstaller() {
+  const inp = document.getElementById('ipaurl');
+  const out = document.getElementById('instout');
+  if (!inp || !out) return;
+  const url = (inp.value || '').trim();
+  if (!/^https?:\/\//i.test(url)) {
+    out.innerHTML = '<p class="warn">that doesn\u2019t look like an http(s) url ' +
+      '\u2014 paste the full link to the .ipa file.</p>';
+    return;
+  }
+  const warnIpa = !/\.ipa(\?|#|$)/i.test(url);
+  const rows = INSTS.map(([k, label]) => {
+    const link = installerLink(k, url);
+    return `<div class="dlrow"><div><b>${label}</b>` +
+      `<span>tap to open in ${label} \u2014 or copy the link</span></div>` +
+      `<div style="display:flex;gap:6px;flex:none">` +
+      `<button class="gbtn sm iopen" data-l="${esc(link)}">OPEN \u2197</button>` +
+      `<button class="gbtn sm icopy" data-c="${esc(link)}">COPY</button>` +
+      `</div></div>`;
+  }).join('');
+  out.innerHTML = (warnIpa
+      ? '<p class="dim" style="margin:0 0 10px">\u26a0 url doesn\u2019t end in .ipa \u2014 trying anyway.</p>'
+      : '') + `<div class="dllist">${rows}</div>`;
+  out.querySelectorAll('.iopen').forEach(b =>
+    b.onclick = () => { window.location.href = b.dataset.l; });
+  out.querySelectorAll('.icopy').forEach(b =>
+    b.onclick = () => {
+      if (navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(b.dataset.c);
+      b.textContent = 'COPIED';
+      setTimeout(() => b.textContent = 'COPY', 1200);
+    });
+}
+const instBuildBtn = document.getElementById('instbuild');
+if (instBuildBtn) instBuildBtn.onclick = buildInstaller;
+const ipaUrlInput = document.getElementById('ipaurl');
+if (ipaUrlInput) ipaUrlInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') buildInstaller();
+});
+
+/* ---------- 12c. Editors' choice rail ---------- */
+function paintCurated() {
+  const rail = document.getElementById('currail');
+  if (!rail) return;
+  rail.innerHTML = (DB.curated || []).map(c => {
+    const icon = c.icon
+      ? `<img class="eic" loading="lazy" decoding="async" src="${esc(c.icon)}" alt="">`
+      : '';
+    return `<div class="ecard" data-name="${esc(c.name)}">${icon}` +
+      `<b>${esc(c.name)}</b><p>${esc(c.blurb)}</p></div>`;
+  }).join('');
+}
+const curRailEl = document.getElementById('currail');
+if (curRailEl) curRailEl.addEventListener('click', e => {
+  const card = e.target.closest('.ecard');
+  if (card) {
+    const hit = appIndex.get(card.dataset.name);
+    if (hit) openModal(hit.app.name, hit.sector);
+  }
+});
+
 /* ---------- 13. Weekly refresh countdown ---------- */
 function startRefreshCountdown() {
   const el = document.getElementById('nxupd');
@@ -816,6 +1004,7 @@ function paintHomeGrids() {
 function repaintHomeCards() {
   paintHomeGrids();
   paintFresh();
+  paintCurated();
 }
 const myiosEl = document.getElementById('myios');
 if (myiosEl) {
@@ -837,7 +1026,7 @@ document.querySelectorAll('.tab').forEach(b =>
 document.getElementById('navrepobtn').onclick = () => openRepoMenu();
 // [search] tab: jump to the toolbar and focus the search field
 document.getElementById('searchtab').onclick = () => {
-  if (tab === 'guide') setTab('home');
+  if (tab === 'guide' || tab === 'installer') setTab('home');
   document.getElementById('toolbar').scrollIntoView({ behavior: 'smooth', block: 'start' });
   setTimeout(() => document.getElementById('q').focus({ preventScroll: true }), 450);
 };
@@ -878,6 +1067,8 @@ function copyBtn(btn) {
 (function init() {
   paintHomeGrids();
   paintFresh();
+  paintCurated();
+  paintFavRadar();
   // source filter options are baked into the HTML by build.py
   buildBootLines();
   renderSafeSources();
