@@ -1006,7 +1006,7 @@ def render(db, verified, out_path):
                      for a in c if a["updDate"]), default=str(date.today()))
 
     tiles = "".join(
-        f'<div class="tile" data-t="{c}"><b>{len(db["cats"][c]):,}</b>'
+        f'<div class="tile" tabindex="0" role="button" data-t="{c}"><b>{len(db["cats"][c]):,}</b>'
         f'<span>{c.lower()}</span></div>' for c in CATS)
 
     # sources pasteable straight into AltStore/SideStore (ipaomtk is a
@@ -1049,7 +1049,7 @@ def render(db, verified, out_path):
         "{{SRC_OPTIONS}}": src_options.rstrip("\n"),
         "{{REPO_TILES}}": (
             '    <div class="tiles">\n' + "".join(
-                f'    <div class="tile rtile" data-repo="{k}"><b>'
+                f'    <div class="tile rtile" tabindex="0" role="button" data-repo="{k}"><b>'
                 f"{sum(1 for sec in db['cats'].values() for a in sec if k in a['src']):,}</b>"
                 f'<span>{esc_h(SOURCES[k]["short"].lower())}</span></div>\n'
                 for k in db["repos"]

@@ -300,7 +300,7 @@ function cardHTML(a) {
   
   const tweak = a.tweak ? `<div class="tp">${esc(a.tweak)}</div>` : '';
   const fav = favs.has(a.name);
-  return `<div class="card${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
+  return `<div class="card${tooNew(a) ? ' oldios' : ''}" tabindex="0" role="button" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
     <div class="badge">${a.n} BUILDS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
     <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}${szpill}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" aria-label="${fav ? 'Remove from favorites' : 'Save to favorites'}" aria-pressed="${fav ? 'true' : 'false'}">${fav ? '★' : '☆'}</button></div></div>
     <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
@@ -334,7 +334,7 @@ function freshRowHTML(a) {
     : '';
   const pills = a.src.map(srcBadge).join('')
     + (tooNew(a) ? `<span class="src s-noios">⚠ NEEDS iOS ${esc(reqIos(a))}+</span>` : '');
-  return `<div class="frow${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">`
+  return `<div class="frow${tooNew(a) ? ' oldios' : ''}" tabindex="0" role="button" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">`
     + `${icon}<div class="fn"><b>${esc(a.name)}</b><span class="fv">v${esc(a.lv || '?')}</span></div>`
     + `<span class="fwhen">updated ${esc(daysLabel(a.upd))}</span>`
     + `<div class="fsrc">${pills}</div></div>`;
@@ -932,7 +932,7 @@ function paintCurated() {
     const icon = c.icon
       ? `<img class="eic" loading="lazy" decoding="async" src="${esc(c.icon)}" alt="">`
       : '';
-    return `<div class="ecard" data-name="${esc(c.name)}">${icon}` +
+    return `<div class="ecard" tabindex="0" role="button" data-name="${esc(c.name)}">${icon}` +
       `<b>${esc(c.name)}</b><p>${esc(c.blurb)}</p></div>`;
   }).join('');
 }
@@ -1049,6 +1049,10 @@ document.addEventListener('keydown', e => {
   if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
     e.preventDefault();
     document.getElementById('q').focus();
+  }
+  if ((e.key === 'Enter' || e.key === ' ') && document.activeElement.getAttribute('role') === 'button') {
+    e.preventDefault();
+    document.activeElement.click();
   }
 });
 
