@@ -36,7 +36,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from build import split_db, newest_dl_url  # noqa: E402  (no side effects on import)
 
-VT_CLI = "/home/hatch/workspace/skills/virustotal/bin/vt.py"
+VT_CLI = os.environ.get("VT_CLI",
+                       "/home/hatch/workspace/skills/virustotal/bin/vt.py")
 CACHE_PATH = os.path.join(HERE, "vt_cache.json")
 DB_PATH = os.path.join(HERE, "index.html")
 SLEEP_SECS = 16          # >=16s between CLI invocations (4 req/min limit)

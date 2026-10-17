@@ -64,13 +64,15 @@ def blob_sha(content: bytes) -> str:
     return hashlib.sha1(b"blob %d\0" % len(content) + content).hexdigest()
 
 
-def push_tree(workdir, files, message, branch="main", author=None, log=print):
+def push_tree(workdir, files, message, branch="main", author=None, log=print,
+            deletes=()):
     """Upload blobs -> build tree -> commit -> move <branch> to the commit.
 
     `files` are paths relative to `workdir`. `author`, when given, is
     passed through as the commit's author block (push-main.py attributes
     commits to Strider2; weekly-refresh.py passes None, exactly like its
     old inline code, so GitHub attributes those to the token owner).
+    `deletes` are repo-relative paths removed from the tree (sha=null).
 
     Returns (commit_sha, new_tree_sha). Raises SystemExit on API errors.
     """
@@ -86,6 +88,10 @@ def push_tree(workdir, files, message, branch="main", author=None, log=print):
         entries.append({"path": f, "mode": "100644", "type": "blob",
                         "sha": blob["sha"]})
         log(f"  blob {f} ({len(content):,} bytes) -> {blob['sha'][:12]}")
+    for f in deletes:
+        entries.append({"path": f, "mode": "100644", "type": "blob",
+                        "sha": None})
+        log(f"  delete {f}")
     base_tree = api("GET", f"/repos/{REPO}/git/commits/{parent}")["tree"]["sha"]
     new_tree = api("POST", f"/repos/{REPO}/git/trees",
                    {"base_tree": base_tree, "tree": entries})["sha"]
@@ -101,8 +107,9 @@ def push_tree(workdir, files, message, branch="main", author=None, log=print):
     return commit["sha"], new_tree
 
 
-def byte_verify(workdir, files, new_tree, log=print):
-    """Confirm every remote tree blob SHA matches the local file bytes.
+def byte_verify(workdir, files, new_tree, log=print, deletes=()):
+    """Confirm every remote tree blob SHA matches the local file bytes,
+    and every path in `deletes` is absent from the remote tree.
 
     Raises SystemExit on mismatch — the push went through but the remote
     tree is not what we uploaded, so nothing else should push on top until
@@ -120,6 +127,10 @@ def byte_verify(workdir, files, new_tree, log=print):
         ok = ok and match
         log(f"  verify {f}: {'OK ' if match else 'MISMATCH'} "
             f"local={want[:12]} remote={(got or '?')[:12]}")
+    for f in deletes:
+        gone = f not in rmap
+        ok = ok and gone
+        log(f"  verify delete {f}: {'OK ' if gone else 'STILL PRESENT'}")
     if not ok:
         raise SystemExit("BYTE VERIFICATION FAILED")
     log("byte verification passed: remote tree == local files")

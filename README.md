@@ -34,7 +34,7 @@ python3 build.py --out /tmp/test.html
 
 A source that fails to fetch is skipped gracefully — one dead repo never breaks the build.
 
-## Sources indexed (13)
+## Sources indexed (15)
 
 | Source | Type |
 |---|---|
@@ -42,6 +42,8 @@ A source that fails to fetch is skipped gracefully — one dead repo never break
 | AppTesters IPA Repo | community IPA library |
 | CyPwn IPA Library | community IPA library |
 | Quantum Source / Quantum Plus | sideloading sources |
+| Accretion | community IPA library |
+| IPAOMTK | WordPress IPA library (indexed, not an AltStore feed — excluded from the guide's paste list) |
 | WuXu's Library++ | personal IPA library |
 | Starfiles | community IPA repo — currently failing to fetch, skipped automatically (the builder tolerates dead sources) |
 | SideStore Community | official-ish community source ★ |
@@ -121,6 +123,15 @@ python3 push-main.py "<commit message>" <file> [file ...]
 - Apps are grouped by **name** (tweaked builds reuse junk bundle IDs across unrelated apps, so the name is the stable identity). Every distinct bundle ID is kept in the app's bundle list.
 - App Store verification = the bundle ID exists on Apple's Search API. "Unverified" doesn't always mean fake — legit betas and delisted apps won't match either.
 - The site's favorites, the beginner field manual, and the category browser are all client-side; there's no server to deploy.
+
+## Screenshots
+
+![app-horde home](ah-home.png)
+![app-horde app intel modal](ah-modal.png)
+
+## License
+
+MIT — see [LICENSE](LICENSE).
 
 ## Disclaimer
 
