@@ -2,7 +2,7 @@
 
 A searchable index of sideloadable iOS apps — zombie-terminal styling (intentional), App Store verification, risk signals, version history, and a beginner field manual. Static site, no backend, no signup. It hosts no files; it indexes third-party repos and links out.
 
-Live: https://crtghoul.github.io/app-horde/ — repo `crtGhoul/app-horde`, GitHub Pages.
+Live: [GitHub Pages](https://crtghoul.github.io/app-horde/) · [Cloudflare mirror](https://app-horde.pages.dev) — repo `crtGhoul/app-horde`.
 
 ## How the pipeline works
 
