@@ -779,9 +779,12 @@ function closeModal() {
 modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
 /* ---------- 10b. Deep links: #app=<name> opens that app's intel file ---------- */
-const appIndex = new Map();
-Object.entries(DB.cats).forEach(([sector, apps]) =>
-  apps.forEach(a => { if (!appIndex.has(a.name)) appIndex.set(a.name, { app: a, sector }); }));
+let appIndex = new Map();
+function buildAppIndex() {
+  appIndex = new Map();
+  Object.entries(DB.cats).forEach(([sector, apps]) =>
+    apps.forEach(a => { if (!appIndex.has(a.name)) appIndex.set(a.name, { app: a, sector }); }));
+}
 function routeHash() {
   const m = location.hash.match(/^#app=(.+)/);
   if (!m) return;
@@ -1064,7 +1067,9 @@ function copyBtn(btn) {
     else done();
   };
 }
-(function init() {
+/* startApp() runs after db.json.gz loads (see template head). */
+function startApp() {
+  buildAppIndex();
   paintHomeGrids();
   paintFresh();
   paintCurated();
@@ -1082,7 +1087,8 @@ function copyBtn(btn) {
   animateCounters();
   startRain();
   startRefreshCountdown();
-})();
+}
+
 </script>
 </body>
 </html>

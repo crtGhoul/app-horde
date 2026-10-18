@@ -619,7 +619,7 @@ next refresh in <span id="nxupd">…</span> · the horde feeds every monday</foo
 <script>/* =========================================================================
  * APP_HORDE — client
  *
- *  1. Data            (DB injected by build.py)
+ *  1. Data            (split build: fetched from data/*.json at boot)
  *  2. Helpers         (escaping, formatting)
  *  3. Boot sequence   (fake UNDEAD BIOS, skippable)
  *  4. Hero counters
@@ -635,5 +635,17 @@ next refresh in <span id="nxupd">…</span> · the horde feeds every monday</foo
  * 14. Wiring & init   (events, keyboard shortcuts, boot)
  * ========================================================================= */
 
-/* ---------- 1. Data ---------- */
-const DB = 
+/* ---------- 1. Data (split build: fetched from data/*.json) ---------- */
+let DB = null;
+async function loadDB() {
+  const meta = await (await fetch("data/meta.json")).json();
+  const cats = {};
+  await Promise.all(Object.entries(meta.catfiles).map(async ([sector, file]) => {
+    const r = await fetch("data/" + file);
+    if (!r.ok) throw new Error("data/" + file + " -> HTTP " + r.status);
+    cats[sector] = await r.json();
+  }));
+  meta.cats = cats;
+  delete meta.catfiles;
+  return meta;
+}

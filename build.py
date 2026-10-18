@@ -565,16 +565,48 @@ def split_db(html_text):
     return json.loads(html_text[i:j + 1])
 
 
-def load_seed(path):
-    """Seed maps from the previous index.html: name -> it/desc/tweak/sector/icon."""
-    seed = {}
-    if not os.path.exists(path):
-        return seed, {}
+def load_db_from_data(data_dir):
+    """Reassemble the DB from data/meta.json + data/cats/*.json (split build).
+
+    Inverse of render()'s split. Raises on missing/corrupt files.
+    """
+    with open(os.path.join(data_dir, "meta.json"), encoding="utf-8") as fh:
+        meta = json.load(fh)
+    cats = {}
+    for sector, fname in meta.get("catfiles", {}).items():
+        with open(os.path.join(data_dir, fname), encoding="utf-8") as fh:
+            cats[sector] = json.load(fh)
+    db = dict(meta)
+    db["cats"] = cats
+    del db["catfiles"]
+    return db
+
+
+def previous_db(path):
+    """Return the previous build's DB for seeding: tries the inline
+    `const DB = ...` first (old single-file builds), then data/meta.json
+    next to `path` (split builds). {} when neither exists (first build).
+    """
+    if os.path.exists(path):
+        try:
+            db = split_db(open(path, encoding="utf-8").read())
+            if db:
+                return db
+        except Exception as e:
+            print(f"  ! inline seed parse failed: {e}", flush=True)
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(path)), "data")
     try:
-        with open(path, encoding="utf-8") as fh:
-            db = split_db(fh.read())
+        return load_db_from_data(data_dir)
     except Exception as e:
-        print(f"  ! seed parse failed: {e}", flush=True)
+        print(f"  ! data-dir seed failed ({data_dir}): {e}", flush=True)
+    return {}
+
+
+def load_seed(path):
+    """Seed maps from the previous build: name -> it/desc/tweak/sector/icon."""
+    seed = {}
+    db = previous_db(path)
+    if not db:
         return seed, {}
     for apps in db.get("cats", {}).values():
         for a in apps:
@@ -718,8 +750,8 @@ def build_db(fetched, seed, old_db):
     old_db:  the previous DB (only used to keep the Monday-refresh schedule
              block stable across rebuilds).
 
-    Returns (db, verified_count). `db` is JSON-serializable and embedded
-    verbatim into index.html as `const DB = {...}`.
+    Returns (db, verified_count). `db` is JSON-serializable; render()
+    splits it into data/meta.json + data/cats/*.json next to index.html.
     """
     # Group by normalized app NAME (tweaked builds reuse junk/placeholder bundle
     # ids like com.karbinstoree across unrelated apps; the name is the stable
@@ -987,13 +1019,18 @@ def esc_h(s):
 
 def render(db, verified, out_path):
     """Render index.html: template_head.html with {{PLACEHOLDERS}} filled,
-    then the DB JSON as `const DB = {...}`, then template_tail.html.
+    then template_tail.html. The DB is NOT inlined — it is split into
+    data/meta.json + data/cats/<sector>.json next to the output file, and
+    the page fetches them at load (see loadDB() in template_head.html).
+
+    The split keeps every output file under Cloudflare Pages' 25 MiB
+    per-file limit (asserted below with 20 MiB headroom).
 
     Every placeholder must exist in the head template (asserted) so a
     template edit that drops one fails loudly instead of shipping a page
-    with raw {{TAGS}} in it. Returns the short SHA-256 digest of the DB
-    JSON, which the weekly action prints so no-op rebuilds can skip the
-    commit.
+    with raw {{TAGS}} in it. Returns the short SHA-256 digest of the
+    dataset, which the weekly action prints so no-op rebuilds can skip
+    the commit.
     """
     head = open(os.path.join(HERE, "template_head.html"), encoding="utf-8").read()
     tail = open(os.path.join(HERE, "template_tail.html"), encoding="utf-8").read()
@@ -1063,13 +1100,42 @@ def render(db, verified, out_path):
         assert k in head, f"placeholder {k} missing from template"
         head = head.replace(k, v)
 
-    db_json = json.dumps(db, ensure_ascii=True)
-    digest = hashlib.sha256(db_json.encode("utf-8")).hexdigest()[:16]
+    # Split the DB: data/meta.json (everything but cats) + one
+    # data/cats/<sector>.json per sector. Deterministic: CATS order,
+    # insertion-ordered JSON, same as the old inline blob.
+    out_dir = os.path.dirname(os.path.abspath(out_path))
+    data_dir = os.path.join(out_dir, "data")
+    cats_dir = os.path.join(data_dir, "cats")
+    os.makedirs(cats_dir, exist_ok=True)
+
+    catfiles = {}
+    digest_src = []
+    for sector in CATS:
+        apps = db["cats"].get(sector, [])
+        slug = re.sub(r"[^a-z0-9]+", "-", sector.lower()).strip("-")
+        fname = f"cats/{slug}.json"
+        catfiles[sector] = fname
+        blob = json.dumps(apps, ensure_ascii=True)
+        fpath = os.path.join(data_dir, fname)
+        with open(fpath, "w", encoding="utf-8") as f:
+            f.write(blob)
+        sz = os.path.getsize(fpath)
+        assert sz < 20 * 1024 * 1024, \
+            f"{fname} is {sz:,} bytes — over the 20 MiB Pages headroom"
+        digest_src.append(blob)
+    meta = {k: v for k, v in db.items() if k != "cats"}
+    meta["catfiles"] = catfiles
+    meta_json = json.dumps(meta, ensure_ascii=True)
+    with open(os.path.join(data_dir, "meta.json"), "w", encoding="utf-8") as f:
+        f.write(meta_json)
+    digest = hashlib.sha256(
+        (meta_json + "".join(digest_src)).encode("utf-8")).hexdigest()[:16]
+
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(head)
-        f.write(db_json)
         f.write(tail)
-    print(f"  wrote {out_path} ({os.path.getsize(out_path):,} bytes), db hash {digest}")
+    print(f"  wrote {out_path} ({os.path.getsize(out_path):,} bytes) + "
+          f"data/ ({len(catfiles)} cats files), db hash {digest}")
     return digest
 
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """VirusTotal verdict scanning for app-horde.
 
-Reads the app DB from index.html (const DB = ...), resolves each app's newest
-build download URL (same newest_dl_url() build.py uses at build time, so the
-cache always lines up), and looks it up on VirusTotal via the vt.py skill CLI.
+Reads the app DB (data/*.json split build, or legacy inline const DB in
+index.html), resolves each app's newest build download URL (same
+newest_dl_url() build.py uses at build time, so the cache always lines up),
+and looks it up on VirusTotal via the vt.py skill CLI.
 
 Maintains vt_cache.json in this directory, keyed by download URL:
   {"https://.../app.ipa": {"malicious": 0, "suspicious": 1, "harmless": 70,
@@ -34,7 +35,7 @@ from datetime import date
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from build import split_db, newest_dl_url  # noqa: E402  (no side effects on import)
+from build import previous_db, newest_dl_url  # noqa: E402  (no side effects on import)
 
 VT_CLI = os.environ.get("VT_CLI",
                        "/home/hatch/workspace/skills/virustotal/bin/vt.py")
@@ -64,7 +65,7 @@ def save_cache(cache):
 
 def app_urls():
     """Ordered unique newest-build URLs, most-built apps first."""
-    db = split_db(open(DB_PATH, encoding="utf-8").read())
+    db = previous_db(DB_PATH)
     apps = []
     for sec_apps in db.get("cats", {}).values():
         apps.extend(sec_apps)

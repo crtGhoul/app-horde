@@ -10,6 +10,8 @@ push-main.py); this script passes a null logger to it because the cron's
 push step has always been quiet apart from the final "PUSHED" line.
 """
 import datetime
+import glob
+import json
 import os
 import re
 import subprocess
@@ -21,22 +23,42 @@ import gh_push
 
 
 def sanity_check(path):
-    """Gate the push on a plausible index.html: big enough, hero line and
-    the embedded DB present, and the inline <script> parses as JS.
+    """Gate the push on a plausible split build: a small index.html shell,
+    the data/*.json dataset present and parseable, every output file under
+    Cloudflare Pages' 25 MiB per-file limit, and every inline <script>
+    parsing as JS.
 
     Raises AssertionError (which aborts the refresh before any push) on
     any failure.
     """
     s = open(path, encoding="utf-8").read()
-    assert len(s) > 1_000_000, "index.html suspiciously small"
+    assert len(s) > 50_000, "index.html suspiciously small"
+    assert len(s) < 25 * 1024 * 1024, \
+        "index.html exceeds Cloudflare Pages' 25 MiB per-file limit"
     assert re.search(r"\d[\d,]* apps indexed", s), "hero line missing"
-    assert "const DB = " in s, "DB missing"
+    assert "loadDB()" in s, "dataset loader missing from index.html"
+    data_dir = os.path.join(os.path.dirname(path), "data")
+    meta_p = os.path.join(data_dir, "meta.json")
+    assert os.path.isfile(meta_p), "data/meta.json missing"
+    meta = json.load(open(meta_p, encoding="utf-8"))
+    assert meta.get("catfiles"), "data/meta.json has no catfiles map"
+    assert meta.get("unique", 0) > 1000, "meta.json app count implausible"
+    for sector, fname in meta["catfiles"].items():
+        fp = os.path.join(data_dir, fname)
+        assert os.path.isfile(fp), f"data/{fname} missing"
+        assert os.path.getsize(fp) < 25 * 1024 * 1024, \
+            f"data/{fname} exceeds Cloudflare Pages' 25 MiB per-file limit"
+        apps = json.load(open(fp, encoding="utf-8"))
+        assert isinstance(apps, list) and apps, f"data/{fname} empty/not a list"
     scripts = re.findall(r"<script>(.*?)</script>", s, re.S)
     assert scripts, "no <script> blocks found in index.html"
     check_js = "/tmp/refresh-check.js"
-    open(check_js, "w", encoding="utf-8").write(scripts[0])
-    rc = subprocess.run(["node", "--check", check_js]).returncode
-    assert rc == 0, "JS syntax check failed"
+    for i, blk in enumerate(scripts):
+        if not blk.strip():
+            continue
+        open(check_js, "w", encoding="utf-8").write(blk)
+        rc = subprocess.run(["node", "--check", check_js]).returncode
+        assert rc == 0, f"JS syntax check failed on script block {i}"
     print("sanity checks passed", flush=True)
 
 
@@ -65,10 +87,17 @@ def main():
     # 2. sanity checks before pushing
     sanity_check(os.path.join(HERE, "index.html"))
 
-    # 3. push via git-database API (same route as the manual pushes)
+    # 3. push via git-database API (same route as the manual pushes).
+    # The split dataset (data/meta.json + data/cats/*.json) ships with the
+    # shell — GitHub Pages and the Cloudflare mirror both need it.
+    data_files = sorted(
+        os.path.relpath(p, HERE)
+        for p in glob.glob(os.path.join(HERE, "data", "meta.json"))
+        + glob.glob(os.path.join(HERE, "data", "cats", "*.json")))
+    assert data_files, "no data files built — aborting push"
     files = ["index.html", "fresh.xml", "build.py", "template_head.html",
              "template_tail.html", "weekly-refresh.py", "vt-scan.py",
-             "vt_cache.json", "curated.json", "link_health.json"]
+             "vt_cache.json", "curated.json", "link_health.json"] + data_files
     today = datetime.date.today().isoformat()
     commit_sha, _ = gh_push.push_tree(
         HERE, files,
