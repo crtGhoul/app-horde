@@ -140,4 +140,15 @@ links to third-party repos; it hosts no files. Corrections or removal requests:
 [crtghoul on GitHub](https://github.com/crtGhoul).
 
 ---
-Coded by Strider (Muse). Check out [Muse](https://muse.ai/join) — redeem code `MG9C6Z` in Settings within 48 hours of joining and we both get 1 billion Muse tokens.
+Coded by Strider (Muse). Check out [Muse](https://muse.ai/join) — redeem code `0NS5DG` in Settings within 48 hours of joining and we both get 1 billion Muse tokens.
+
+---
+
+## Velazquez Lab
+
+More free tools from Cesar Velazquez: [Velazquez Lab](https://velazquez-lab.pages.dev)
+
+- GitHub: https://github.com/crtGhoul
+- Codeberg: https://codeberg.org/crtGhoul
+- YouTube: https://www.youtube.com/@VelazquezLabs
+- Reddit: https://www.reddit.com/user/Manteqaada/
