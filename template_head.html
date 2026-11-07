@@ -168,6 +168,29 @@ h2.sec::before{content:"// "}
 .pill{display:inline-block;background:#0d1a0e;border:1px solid var(--border);color:var(--toxic);
   padding:3px 10px;font-size:11px;margin:2px 4px 2px 0;vertical-align:middle}
 .rate{color:var(--amber);border-color:var(--amber)}
+/* Prompt 20: VirusTotal security pill (card grid + modal) */
+.vtp{display:inline-block;border:1px solid;padding:3px 8px;font-size:10px;
+  letter-spacing:1px;margin:2px 4px 2px 0;font-weight:700;vertical-align:middle}
+.vtp.clean{color:var(--toxic);border-color:var(--toxic);background:#0d1a0e}
+.vtp.susp{color:var(--amber);border-color:var(--amber);background:#1a1408}
+.vtp.mal{color:#fff;border-color:var(--blood);background:var(--blood)}
+.vtp.none{color:var(--muted);border-color:var(--border);background:transparent;font-weight:400}
+/* Prompt 20: mirror chips under each version picker */
+.vmirror{margin:4px 0 2px;font-size:12px}
+.vmirror .gbtn{margin:2px 4px 2px 0}
+.vsrc.flash{outline:2px solid var(--toxic);outline-offset:2px}
+/* Prompt 20 v2: category headers inside global search results */
+.gridhead{grid-column:1/-1;color:var(--toxic);border-bottom:1px solid var(--border);
+  padding:14px 2px 6px;font-size:12px;letter-spacing:2px}
+/* Prompt 21: what-changed rows */
+.chgrow{display:flex;justify-content:space-between;gap:10px;align-items:baseline;
+  padding:8px 0;border-bottom:1px dashed var(--border)}
+.chgrow .nm{color:var(--paper,#e8e8e8);cursor:pointer}
+.chgrow .nm:hover{color:var(--toxic)}
+.chgrow .delta{color:var(--muted);font-size:12px;text-align:right}
+.chgrow .add{color:var(--toxic)}
+.chgrow .del{color:var(--blood)}
+.chgrow .newtag{color:var(--amber);font-size:10px;letter-spacing:1px}
 .src{display:inline-block;border:1px solid;padding:3px 8px;font-size:10px;
   letter-spacing:1px;margin:2px 4px 2px 0}
 .src-hi{background:var(--c,var(--toxic));color:#000;border-color:var(--c,var(--toxic));font-weight:700}
@@ -320,6 +343,13 @@ footer .skull{color:var(--blood);font-size:15px}
 .vdead{background:none;border:1px solid var(--border);color:var(--muted);
   font-family:inherit;font-size:12px;padding:5px 9px;cursor:pointer}
 .vdead:hover{color:var(--blood);border-color:var(--blood)}
+.s-dead{color:var(--blood);border-color:var(--blood)}
+/* favorites shelf: drag reorder + move buttons (faves tab only) */
+.favmove{margin-left:6px;white-space:nowrap}
+.fmv{background:none;border:1px solid var(--border);color:var(--muted);
+  font:inherit;font-size:11px;padding:1px 7px;cursor:pointer;line-height:1.4}
+.fmv:hover{color:var(--amber);border-color:var(--amber)}
+.card[draggable="true"]{cursor:grab}
 /* ================= per-installer mini guides ================= */
 .iguide{margin:10px 0 4px;font-size:12.5px}
 .iguide summary{cursor:pointer;color:var(--toxic);letter-spacing:1px;font-size:12px}
@@ -356,6 +386,48 @@ footer .skull{color:var(--blood);font-size:15px}
   .glitch::before, .glitch::after, .tile, .mbox, .cursor { animation: none !important; }
   #rain { display: none; }
 }
+
+/* Nothing theme fix-pass (2026-11-06): remap toxic-bg elements for the light theme. */
+#rain{display:none !important;}
+.tab.active{background:#ffc700 !important;color:#040404 !important;border-color:#ffc700 !important;box-shadow:none !important;}
+.s-fresh{background:#ffc700 !important;color:#040404 !important;border-color:#ffc700 !important;}
+.ptag{background:#ffc700 !important;color:#040404 !important;}
+.cta{background:#ffc700 !important;color:#040404 !important;}
+.tabs .tab{color:#f4f4f4 !important;}
+.tabs .brand{color:#f4f4f4 !important;}
+.n{color:#040404 !important;}
+.ic{background:#ececec !important;}
+
+.nm{color:#040404 !important;}
+.pill{background:#ececec !important;color:#040404 !important;border-color:rgba(0,0,0,.12) !important;}
+</style>
+
+<style id="nothing-theme">
+:root{
+  --bg:#f4f4f4; --panel:#ffffff; --card:#ffffff; --dim:#ececec;
+  --text:#040404; --muted:#5c5c5c; --border:rgba(0,0,0,.12);
+  --toxic:#040404; --amber:#ffc700; --blood:#e02424; --cyan:#040404;
+}
+body{background:#f4f4f4 !important;}
+body::before, body::after{display:none !important;}
+h1, h2, h3{font-family:Georgia,'Times New Roman',serif !important;}
+.glitch, .glitch::before, .glitch::after{text-shadow:none !important;animation:none !important;}
+.gbtn{background:#040404 !important;color:#fff !important;border-color:#040404 !important;}
+.gbtn:hover{background:#222 !important;color:#fff !important;}
+.card{border-radius:8px !important;box-shadow:none !important;}
+</style>
+
+<style id="spiced-theme">
+/* SPICE (2026-11-04): same Nothing light base, but the accent is the horde's
+   own toxic green instead of the hub's Signal Yellow, and section headers
+   keep their terminal prompt voice. */
+:root{ --amber:#22c55e !important; }
+.tab.active{background:#22c55e !important;border-color:#22c55e !important;}
+.s-fresh{background:#22c55e !important;border-color:#22c55e !important;}
+.ptag{background:#22c55e !important;}
+.cta{background:#22c55e !important;}
+h2.sec{ font-family:ui-monospace,Menlo,Consolas,monospace !important; }
+h2.sec::before{ content:"> "; color:#16a34a; }
 </style>
 </head>
 <body>
@@ -364,11 +436,11 @@ footer .skull{color:var(--blood);font-size:15px}
 <div id="boot">
   <div id="bootterm"><pre id="bootlog"></pre></div>
   <div class="bar"><div id="bootbar"></div></div>
-  <button id="bootskip">[ CLICK TO SKIP ]</button>
+  <button id="bootskip" data-i18n="skip">[ CLICK TO SKIP ]</button>
 </div>
 
 <nav class="tabs"><div class="wrap">
-  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide">[guide]</button><button class="tab active" data-t="home">[home]</button><button class="tab" data-t="faves">[faves]</button><button class="tab" data-t="top25">[top 25]</button><button class="tab" id="searchtab">[search]</button><button class="tab" id="navrepobtn">[repos]</button><button class="tab" data-t="installer">[installer]</button>
+  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide" data-i18n="nav_guide">[guide]</button><button class="tab active" data-t="home" data-i18n="nav_home">[home]</button><button class="tab" data-t="faves" data-i18n="nav_faves">[faves]</button><button class="tab" data-t="top25" data-i18n="nav_top25">[top 25]</button><button class="tab" data-t="changes" data-i18n="nav_changes">[changes]</button><button class="tab" id="searchtab" data-i18n="nav_search">[search]</button><button class="tab" id="navrepobtn" data-i18n="nav_repos">[repos]</button><button class="tab" data-t="installer" data-i18n="nav_installer">[installer]</button><button class="tab" id="langtoggle" title="idioma / language">[ES]</button>
 </div></nav>
 
 <div class="wrap">
@@ -377,10 +449,10 @@ footer .skull{color:var(--blood);font-size:15px}
       <h1 class="glitch" data-t="APP_HORDE">APP_HORDE</h1>
       <p>{{HERO_LINE}}</p>
       <div class="stats">
-        <div class="stat"><b data-c="{{STAT_HOSTS}}">0</b><span>APPS</span></div>
-        <div class="stat"><b data-c="{{STAT_STRAINS}}">0</b><span>BUILDS</span></div>
-        <div class="stat"><b>12</b><span>SECTORS</span></div>
-        <div class="stat"><b>{{STAT_SOURCES}}</b><span>SOURCES</span></div>
+        <div class="stat"><b data-c="{{STAT_HOSTS}}">0</b><span data-i18n="stat_apps">APPS</span></div>
+        <div class="stat"><b data-c="{{STAT_STRAINS}}">0</b><span data-i18n="stat_builds">BUILDS</span></div>
+        <div class="stat"><b>12</b><span data-i18n="stat_sectors">SECTORS</span></div>
+        <div class="stat"><b>{{STAT_SOURCES}}</b><span data-i18n="stat_sources">SOURCES</span></div>
       </div>
       <div class="quarantine"><b>⚠ QUARANTINE NOTICE — DO YOUR OWN RESEARCH</b><br>
         These are unofficial tweaked IPAs from sideloading repos — not App Store builds.
@@ -389,22 +461,25 @@ footer .skull{color:var(--blood);font-size:15px}
         Star ratings verify the <i>original</i> app — never the modified file.
         Side effects may include revoked certificates, banned accounts, and mild zombification.
         Proceed at your own risk.</div>
-      <div class="ctawrap"><button class="cta" data-goto="guide">☣ NEW HERE? READ THE FIELD MANUAL →</button></div>
+      <div class="ctawrap"><button class="cta" data-goto="guide" data-i18n="cta">☣ NEW HERE? READ THE FIELD MANUAL →</button></div>
     </header>
-    <h2 class="sec">fresh drops<a class="rsslink" href="fresh.xml" title="RSS feed — new builds, refreshed every monday">RSS</a></h2>
+    <h2 class="sec" data-i18n="sec_latest">latest updates</h2>
+    <p class="secsub" id="latestsub">// …</p>
+    <div id="latestlist"></div>
+    <h2 class="sec"><span data-i18n="sec_fresh">fresh drops</span><a class="rsslink" href="fresh.xml" title="RSS feed — new builds, refreshed every monday">RSS</a></h2>
     <p class="secsub" id="freshsub">// …</p>
     <div id="freshlist"></div>
-    <h2 class="sec">editors' choice</h2>
-    <p class="secsub">// hand-picked by the horde keeper</p>
+    <h2 class="sec" data-i18n="sec_editors">editors' choice</h2>
+    <p class="secsub" data-i18n="sub_editors">// hand-picked by the horde keeper</p>
     <div id="currail"></div>
-    <h2 class="sec">browse categories</h2>
+    <h2 class="sec" data-i18n="sec_browsecat">browse categories</h2>
     {{TILES}}
-    <h2 class="sec">browse repos</h2>
+    <h2 class="sec" data-i18n="sec_browserepos">browse repos</h2>
     {{REPO_TILES}}
-    <h2 class="sec">most builds</h2>
+    <h2 class="sec" data-i18n="sec_mostbuilds">most builds</h2>
     <div class="grid" id="topgrid"></div>
-    <h2 class="sec">top rated apps</h2>
-    <p class="secsub">// highest app-store ratings — 5,000+ reviews minimum, original app not the modded file</p>
+    <h2 class="sec" data-i18n="sec_toprated">top rated apps</h2>
+    <p class="secsub" data-i18n="sub_toprated">// highest app-store ratings — 5,000+ reviews minimum, original app not the modded file</p>
     <div class="grid" id="rategrid"></div>
   </div>
 
@@ -413,6 +488,7 @@ footer .skull{color:var(--blood);font-size:15px}
   <p>New to the horde? This page takes you from zero to installed in about 15 minutes.
      Pick a path, grab the tools, add the sources, done.</p>
 </header>
+<div id="esnote" class="gbox" style="display:none">La guía completa está en inglés por ahora</div>
 
 <h2 class="sec">0 · what is sideloading</h2>
 <div class="quarantine" style="margin:0 0 18px"><b>☠ READ THIS FIRST</b><br>
@@ -427,23 +503,24 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   installing app files (<b>.ipa</b> files) from outside the App Store. The apps in this horde are
   <b>tweaked builds</b> — the original apps with mods like unlocked features or removed ads,
   uploaded by the repos.</p>
-  <p>You need an <b>installer app</b> on your iPhone to sign and install them. Three ways to do it below —
-  pick the one that fits you.</p>
+  <p>You need an <b>installer app</b> on your iPhone to sign and install them. Four ways to do it below —
+  pick the one that fits you. <b>No computer at all?</b> That's Path D if you're on iOS 27+.</p>
 </div>
 
 <h2 class="sec">1 · what's going on lately</h2>
-<p class="secsub">// fresh intel — updated oct 18, 2026 · unconfirmed rumors are marked as such</p>
+<p class="secsub">// fresh intel — updated nov 1, 2026 · unconfirmed rumors are marked as such</p>
 <div class="gbox rules">
+  <div id="toolwatch"></div>
   <p><b>☠ LiveContainer is back.</b> After the official repo went dark earlier this month, LiveContainer's GitHub is publishing again — a fresh nightly landed Oct 17 with fixes. If you downloaded the September build, update to the newest nightly from LiveContainer's official releases page. The known gotchas, from their GitHub issues and FAQ:</p>
   <p>① <b>Crash on launch on iOS 26.4+:</b> update to the newest build (3.8.0 stable or a newer nightly). Older builds just die on new iOS.</p>
   <p>② <b>Built-in SideStore freezes or closes the second you open it:</b> fixed in recent builds — update.</p>
   <p>③ <b>JIT apps fail with "Another LiveContainer is not installed":</b> iOS 26 doesn't auto-detect the 2nd container. Open your 2nd LiveContainer app first, leave it running, then go back to the first. Also: JIT on iOS 26 needs the <b>StikDebug</b> app (free on the App Store) — the old airplane-mode JIT trick died in iOS 26.4.</p>
-  <p>④ <b>SideStore won't sign in</b> (ADI -45061 "device not provisioned", HTTP 503 errors): Apple's servers keep breaking old builds — the 503 failure was an Apple-side change that killed SideStore 0.6.4 and earlier, and <b>0.7.0-alpha or a newer nightly fixes it</b>, so update SideStore first. Still failing? Install and re-sign with <b>iLoader</b> from a computer instead — apps stay signed and launch fine even when SideStore's own UI is broken. Re-run iLoader every 7 days. (Community-reported this week: "-80045" sign-in errors are hitting SideStore users too — same flaky Apple backend; wait a while and retry.)</p>
+  <p>④ <b>SideStore won't sign in</b> (ADI -45061 "device not provisioned", HTTP 503, or "-80045"/"-80046" errors): Apple's servers keep breaking old builds — the 503 failure was an Apple-side change that killed SideStore 0.6.4 and earlier, and <b>0.7.0-alpha or a newer nightly fixes it</b>, so update SideStore first. The "-80045"/"-80046" sign-in errors are the same Apple backend flakiness in a new form: update your tool first, then wait a while and try once. Don't hammer retry — repeated failed sign-ins can lock your Apple ID ("-20209", "locked for security reasons"); if that happens, unlock it at iforgot.apple.com and use a spare ID, never your main. Still failing? Install and re-sign with <b>iLoader 2.4.1 or newer</b> from a computer instead — apps stay signed and launch fine even when SideStore's own UI is broken. Re-run iLoader every 7 days.</p>
   <p>⑤ <b>"Maximum number of installed apps using a free developer profile":</b> that's the 3-app limit. Apps running <i>inside</i> LiveContainer don't count — only apps SideStore/AltStore install directly do. Delete one or move apps into LiveContainer.</p>
-  <p><b>☠ Apple is banning accounts for sideloading modded apps.</b> Verified: Apple terminated paid developer accounts used to sideload modified YouTube/Twitter builds (reported Feb 2026 and again in 2026). This month, users installing on iOS 27 report "the provisioning profile is banned" errors mid-install (community-reported) — switching to a different Apple ID can fix it. The pattern is real enough: this is exactly why survival rule ① below says use a spare Apple ID. Never sign with your main.</p>
-  <p><b>AltStore 2.3 (Sept 30, 2026) added Remote AltServer:</b> after the first PC setup, install and refresh apps from anywhere over Wi-Fi — no more same-network refresh dance. A 2.3.1 beta (Patreon testers only, early Oct) fixes background refresh and Remote AltServer setup on iOS 27 — the public release should follow.</p>
-  <p><b>iOS 27 is rolling out to everyone.</b> Apple started pushing iOS 27.0.1 as the main update for iOS 26 holdouts on Oct 8, so expect a fresh wave of "it broke after I updated" reports. Sideloading tools break and get fixed in waves: if something fails on iOS 27, check the tool's GitHub issues page before reinstalling everything.</p>
-  <p><b>TrollStore reality check:</b> official TrollStore still only supports iOS 14.0–17.0. Don't believe "TrollStore for iOS 26" videos — experimental forks exist but aren't proven on real devices. (Oct 9: researchers did pull off an iOS 27 semi-jailbreak through a bug in Apple's own signing servers — but Apple shut it down server-side before any public tool existed. If a video promises one with no public tool attached, it's fake.)</p>
+  <p><b>☠ Apple is banning accounts for sideloading modded apps.</b> Verified: Apple terminated paid developer accounts used to sideload modified YouTube/Twitter builds (reported Feb 2026 and again in 2026). This month, users installing on iOS 27 report "the provisioning profile is banned" errors mid-install (community-reported) — switching to a different Apple ID can fix it. AltStore 2.3.1+ now ships a "Randomize Bundle IDs" option for exactly this error — turn it on before installing new apps (it won't fix an ID that's already flagged). The pattern is real enough: this is exactly why survival rule ① below says use a spare Apple ID. Never sign with your main.</p>
+  <p><b>AltStore 2.3.1+ is out (with 2.3.2 following):</b> it fixes the "-80045" sign-in failures on Mac, plus background refresh and Remote AltServer setup on iOS 27 — update AltStore and AltServer (Mac 1.8.2+) before you troubleshoot anything else. Remote AltServer itself (from 2.3, Sept 30) still stands: after the first PC setup, install and refresh apps from anywhere over Wi-Fi — no more same-network refresh dance.</p>
+  <p><b>iOS 27.2 shipped Oct 26 — update your tools first, then update.</b> It's now out for every iPhone that runs iOS 27 (including the new iPhone Duo). Sideloading tools are reported working on 27.2 with their latest builds (AltStore 2.3.1+, SideStore nightly, iLoader 2.4.1+), so update those before you update iOS — and if your setup works today, there's no rush: big updates still break tools in waves, so check your tool's GitHub issues page first.</p>
+  <p><b>TrollStore reality check:</b> official TrollStore still only supports iOS 14.0–17.0. Don't believe "TrollStore for iOS 26" videos — experimental forks exist but aren't proven on real devices. (Researchers demoed iOS 27 jailbreaks in October, and the researchers say 27.2 patches most of the bugs behind one demo — but none has a public tool. If a video promises one with no tool attached, it's fake.)</p>
 </div>
 
 <h2 class="sec">2 · pick your path</h2>
@@ -476,10 +553,26 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
     <h3>PATH C — TrollStore</h3>
     <p class="pcost">Free · no computer · apps never expire · <b>only iOS 14.0 – 17.0</b> (never 17.0.1+)</p>
     <ol>
-      <li>Check your version: <b>Settings → General → About → iOS Version</b>. If it's 17.0.1 or newer, this path won't work — use A or B.</li>
+      <li>Check your version: <b>Settings → General → About → iOS Version</b>. If it's 17.0.1 or newer, this path won't work — use A, B, or D.</li>
       <li>Follow the official install guide linked below (TrollStore GitHub + ios.cfw.guide). It takes a few minutes.</li>
       <li>Open TrollStore, tap <b>+</b>, and pick any .ipa you downloaded from this site. It installs permanently — no refresh, no revokes.</li>
     </ol>
+  </div>
+  <div class="path">
+    <div class="ptag">free · no computer · iOS 27+</div>
+    <h3>PATH D — SideInstaller + SideStore</h3>
+    <p class="pcost">Free · no computer at any step · refresh apps every 7 days · 3-app limit</p>
+    <ol>
+      <li>Check your version: <b>Settings → General → About → iOS Version</b>. You need <b>27.0 or newer</b>. On 26 or lower, this path won't work — use Path B (one-time computer setup) instead.</li>
+      <li>Enable <b>Developer Mode</b>: <b>Settings → Privacy &amp; Security → Developer Mode → on</b>, then restart when asked.</li>
+      <li>Get <b>SideInstaller</b> on your phone (video walkthrough linked below — grab the current download there) and run it. It installs <b>SideStore</b> directly on your iPhone: pairing and provisioning all happen on-device, no PC involved.</li>
+      <li>Trust the profile: <b>Settings → General → VPN &amp; Device Management</b> → tap the SideStore profile → <b>Trust</b>.</li>
+      <li>Install <b>WireGuard</b> (free on the App Store) or <b>LocalDevVPN</b>, add the SideStore tunnel, and switch it <b>on</b>. SideStore needs the VPN active to sign apps — if your phone restarts, flip it back on.</li>
+      <li>Open SideStore → <b>Settings</b> → sign in with a <b>spare Apple ID</b> (never your main — see survival rule ①).</li>
+      <li>Install apps: browse this site, tap <b>⬇ GET</b> on any app, then share/open the downloaded file in SideStore — or in SideStore tap <b>+</b> and pick the file. It signs and installs right on your phone.</li>
+      <li>Keep the VPN on and refresh before the 7-day expiry — SideStore re-signs over Wi-Fi by itself, no computer ever.</li>
+    </ol>
+    <p class="dim">Heads up: this route is new and community-reported — it works on iOS 27+ but hasn't been around long. If a step fails, check SideStore's GitHub issues before reinstalling everything.</p>
   </div>
 </div>
 
@@ -490,6 +583,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <div class="dlrow"><div><b>iTunes for Windows</b><span>required for AltServer on Windows — from Apple, not the Microsoft Store</span></div><a class="gbtn" href="https://www.apple.com/itunes/" target="_blank" rel="noopener">GET ↗</a></div>
   <div class="dlrow"><div><b>iCloud for Windows</b><span>also required for AltServer on Windows</span></div><a class="gbtn" href="https://support.apple.com/en-us/HT204283" target="_blank" rel="noopener">GET ↗</a></div>
   <div class="dlrow"><div><b>SideStore</b><span>AltStore-style, refreshes over Wi-Fi after one-time PC setup — alternative to Path B</span></div><a class="gbtn" href="https://sidestore.io" target="_blank" rel="noopener">GET ↗</a></div>
+  <div class="dlrow"><div><b>SideInstaller — no-PC SideStore setup</b><span>puts SideStore on your phone with no computer (Path D, iOS 27+) — video walkthrough with current download</span></div><a class="gbtn" href="https://www.youtube.com/watch?v=NlJRqqMwZ5w" target="_blank" rel="noopener">GUIDE ↗</a></div>
   <div class="dlrow"><div><b>Sideloadly</b><span>simple Windows/Mac tool for signing .ipa files — alternative to Path B</span></div><a class="gbtn" href="https://sideloadly.io" target="_blank" rel="noopener">GET ↗</a></div>
   <div class="dlrow"><div><b>Scarlet</b><span>on-device installer, no computer needed — for Path A</span></div><a class="gbtn" href="https://usescarlet.com" target="_blank" rel="noopener">GET ↗</a></div>
   <div class="dlrow"><div><b>TrollStore</b><span>permanent installs, no refresh — Path C, iOS 14.0–17.0 only</span></div><a class="gbtn" href="https://github.com/opa334/TrollStore" target="_blank" rel="noopener">GET ↗</a></div>
@@ -545,7 +639,7 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <div class="fix"><b>✗ LiveContainer crashes on launch (iOS 26.4+)</b><span>Update to LiveContainer 3.6.65 or newer — older builds crash on iOS 26.4+. Still failing? Reboot once and retry.</span></div>
   <div class="fix"><b>✗ "Another LiveContainer is not installed" (JIT apps fail)</b><span>iOS 26 doesn't auto-detect the 2nd container. Open your 2nd LiveContainer app, leave it running, then go back to the first. JIT on iOS 26 also needs the free StikDebug app from the App Store — the old airplane-mode trick died in iOS 26.4.</span></div>
   <div class="fix"><b>✗ Built-in SideStore freezes or closes on launch</b><span>Update LiveContainer to 3.7.2 or newer — that fixed the launch freeze / watchdog kill.</span></div>
-  <div class="fix"><b>✗ SideStore won't sign in (ADI -45061 / HTTP 503 / -80045)</b><span>Update SideStore to 0.7.0-alpha or a newer nightly — Apple server-side changes broke 0.6.4 and earlier. Apple's backend has also been flaky lately, so some sign-in errors clear up on their own — wait a while and retry. Still failing? Install and re-sign with iLoader from a computer instead; re-run iLoader every 7 days.</span></div>
+  <div class="fix"><b>✗ SideStore won't sign in (ADI -45061 / HTTP 503 / -80045 / -80046)</b><span>Update SideStore to 0.7.0-alpha or a newer nightly — Apple server-side changes broke 0.6.4 and earlier. Apple's backend has also been flaky lately, so some sign-in errors clear up on their own — wait a while and try once, don't hammer retry: repeated failed sign-ins can lock your Apple ID ("-20209"); unlock it at iforgot.apple.com. Community-reported fix that worked for several users: in SideStore settings turn off on-device Anisette, pick the "SideStore (New)" Anisette server, reset adi.pb, then sign in again. Still failing? Install and re-sign with iLoader 2.4.1+ from a computer instead; re-run iLoader every 7 days.</span></div>
   <div class="fix"><b>✗ "Failed to list developer app IDs" or other Apple server errors while installing</b><span>Community-reported (Oct 2026): Apple's developer backend has been flaky — these errors can clear up on their own, so wait a while and retry. Still broken? Try a different network.</span></div>
   <div class="fix"><b>✗ "This NSPersistentStoreCoordinator has no persistent stores"</b><span>Nightly-build bug when switching between SideStore and LiveContainer installs. Use the latest stable release instead of a nightly.</span></div>
 </div>
@@ -566,44 +660,56 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
   <div id="instpanels" style="display:none">
     <header class="hero">
       <h1 class="glitch" data-t="IPA INSTALLER">IPA INSTALLER</h1>
-      <p>Paste any direct .ipa link and get one-tap install buttons for every installer.
+      <p data-i18n="inst_p">Paste any direct .ipa link and get one-tap install buttons for every installer.
          No repo needed — if the URL serves an .ipa, this builds the deep links.</p>
     </header>
     <div class="gbox">
       <div class="toolbar" style="position:static;margin:0 0 12px;padding:0;background:none">
-        <input id="ipaurl" type="url" placeholder="paste any .ipa url — https://…" autocomplete="off" spellcheck="false">
-        <button class="gbtn" id="instbuild" type="button">BUILD ⏎</button>
+        <input id="ipaurl" type="url" data-i18n-ph="inst_ph" placeholder="paste any .ipa url — https://…" autocomplete="off" spellcheck="false">
+        <button class="gbtn" id="instbuild" type="button" data-i18n="inst_build">BUILD ⏎</button>
       </div>
-      <div id="instout"><p class="dim">// links appear here — nothing is uploaded, everything happens on your device</p></div>
+      <div id="instout"><p class="dim" data-i18n="inst_out">// links appear here — nothing is uploaded, everything happens on your device</p></div>
+    </div>
+  </div>
+
+  <div id="changespanels" style="display:none">
+    <header class="hero">
+      <h1 class="glitch" data-t="WHAT CHANGED">WHAT CHANGED</h1>
+      <p data-i18n="changes_p">Per-repo version changes from the latest weekly build — what each source added or dropped since the build before it.</p>
+    </header>
+    <div class="gbox">
+      <p class="dim" id="changesmeta" style="margin:0 0 12px"></p>
+      <div id="changeslist"></div>
     </div>
   </div>
 
   <h2 class="sec" id="sectitle"></h2>
   <p class="secsub" id="secsub"></p>
   <div class="toolbar" id="toolbar">
-    <button class="gbtn sm" id="repobtn" type="button">☰ REPOS</button>
-    <input id="q" type="search" placeholder="&gt; search the horde...  ( / )">
+    <button class="gbtn sm" id="repobtn" type="button" data-i18n="repobtn">☰ REPOS</button>
+    <input id="q" type="search" data-i18n-ph="q_ph" placeholder="&gt; search the horde...  ( / )">
     <select id="sort">
-      <option value="alpha">Name A–Z</option>
-      <option value="strains">Most builds</option>
-      <option value="recent">Recently updated</option>
-      <option value="rated">Top rated ★</option>
+      <option value="alpha" data-i18n="sort_alpha">Name A–Z</option>
+      <option value="strains" data-i18n="sort_strains">Most builds</option>
+      <option value="recent" data-i18n="sort_recent">Recently updated</option>
+      <option value="rated" data-i18n="sort_rated">Top rated ★</option>
     </select>
     <select id="srcf">
-      <option value="all">All repos</option>
+      <option value="all" data-i18n="srcf_all">All repos</option>
 {{SRC_OPTIONS}}
     </select>
     <input id="myios" inputmode="decimal" autocomplete="off" spellcheck="false"
+      data-i18n-ph="myios_ph" data-i18n-title="myios_title"
       placeholder="my iOS e.g. 17.4" title="enter your iOS version — apps that need newer get flagged" aria-label="my iOS version">
   </div>
   <div class="grid" id="grid" style="display:none"></div>
-  <div class="empty" id="empty" style="display:none">☠ NO APPS MATCH THIS QUERY</div>
+  <div class="empty" id="empty" style="display:none" data-i18n="empty_msg">☠ NO APPS MATCH THIS QUERY</div>
 </div>
 
 <div id="modal"><div class="mbox" id="mbody"></div></div>
 
 <div id="repomenu"><div class="rmbox">
-  <div class="rmhead"><b>☰ BROWSE REPOS</b><button class="mx" id="rmx" aria-label="Close">✕</button></div>
+  <div class="rmhead"><b data-i18n="rm_head">☰ BROWSE REPOS</b><button class="mx" id="rmx" aria-label="Close">✕</button></div>
   <div id="rmlist"></div>
 </div></div>
 
@@ -611,8 +717,8 @@ banned, or be outright malware. <b>Everything here is use-at-your-own-risk.</b><
 built from {{FOOTER_SOURCES}} — deduped &amp; app-store verified<br>
 this whole site was coded by strider, my AI assistant (Muse)<br>
 <span class="invite">☠ check out <a href="https://muse.ai/join" target="_blank" rel="noopener">Muse, your personal AI agent</a> — redeem my code <code>0NS5DG</code><button class="cpy" data-c="0NS5DG">COPY</button> in Settings within 48 hours of joining and we'll both get 1 billion Muse tokens ☠</span><br>
-unofficial builds — do your own research · use at your own risk<br>
-corrections or removal requests → <a href="https://github.com/crtGhoul" target="_blank" rel="noopener">crtghoul on github</a><br>
+<span data-i18n="footer_unofficial">unofficial builds — do your own research · use at your own risk</span><br>
+corrections or removal requests → <a href="https://codeberg.org/crtGhoul/app-horde/issues" target="_blank" rel="noopener">crtghoul on codeberg</a><br>
 the horde remembers · for reference only · data as of {{DATA_DATE}}<br>
 next refresh in <span id="nxupd">…</span> · the horde feeds every monday</footer>
 
@@ -647,5 +753,12 @@ async function loadDB() {
   }));
   meta.cats = cats;
   delete meta.catfiles;
+  /* Prompt 21: per-source version diffs from the latest build.
+     Fail-open — an older mirror without changes.json just shows an
+     empty "what changed" view. */
+  try {
+    const cr = await fetch("data/changes.json");
+    meta.changes = cr.ok ? await cr.json() : null;
+  } catch (e) { meta.changes = null; }
   return meta;
 }
