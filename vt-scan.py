@@ -64,14 +64,46 @@ def save_cache(cache):
 
 
 def app_urls():
-    """Ordered unique newest-build URLs, most-built apps first."""
+    """Ordered unique newest-build URLs by scan priority.
+
+    Priority order:
+      1. Apps from db["top"], in list order.
+      2. Apps from db["toprated"], in list order, skipping names
+         already emitted.
+      3. Every remaining app across all cats, sorted by build count
+         desc, then name A-Z.
+    Apps are deduped by name across the three tiers, then URLs are
+    resolved with newest_dl_url() and deduped preserving order.
+    """
     db = previous_db(DB_PATH)
-    apps = []
+    ordered = []
+    seen_names = set()
+
+    def _add(app):
+        name = app.get("name") or ""
+        if name in seen_names:
+            return
+        seen_names.add(name)
+        ordered.append(app)
+
+    for app in db.get("top") or []:
+        _add(app)
+    for app in db.get("toprated") or []:
+        _add(app)
+
+    remaining_by_name = {}
     for sec_apps in db.get("cats", {}).values():
-        apps.extend(sec_apps)
-    apps.sort(key=lambda a: (-(a.get("n") or 0), (a.get("name") or "").lower()))
+        for app in sec_apps:
+            name = app.get("name") or ""
+            if name in seen_names or name in remaining_by_name:
+                continue
+            remaining_by_name[name] = app
+    remaining = list(remaining_by_name.values())
+    remaining.sort(key=lambda a: (-(a.get("n") or 0), (a.get("name") or "").lower()))
+    ordered.extend(remaining)
+
     seen, urls = set(), []
-    for a in apps:
+    for a in ordered:
         u = newest_dl_url(a)
         if u and u not in seen:
             seen.add(u)
@@ -121,21 +153,36 @@ def extract_stats(payload):
     }
 
 
-def process(urls, cmd, cache, deadline, tag):
-    """Process URLs with the given CLI command. Returns (done, quota_hit)."""
+def process(urls, cmd, cache, deadline, tag, state):
+    """Process URLs with the given CLI command. Returns (done, quota_hit).
+
+    Pacing is continuous across calls: `state["last"]` carries the wall
+    clock of the previous CLI invocation between target lists, so the
+    >=16s gap holds at list boundaries too (monday runs two lists).
+    A 401/403 means the API key is dead — abort the whole run (exit 1)
+    instead of burning the remaining budget on guaranteed failures.
+    """
     done, fails = 0, 0
     for i, url in enumerate(urls):
         if time.time() > deadline - 90:
             print(f"  [{tag}] time budget nearly spent, stopping cleanly "
                   f"({done}/{len(urls)} processed)", flush=True)
             break
-        if i > 0:
-            time.sleep(SLEEP_SECS)
+        if state.get("last"):
+            wait = SLEEP_SECS - (time.time() - state["last"])
+            if wait > 0:
+                time.sleep(wait)
+        state["last"] = time.time()
         http, payload = cli(cmd, url)
         if http == 429:
             save_cache(cache)
             print("quota exhausted, resuming next run", flush=True)
             return done, True
+        if http in (401, 403):
+            save_cache(cache)
+            print(f"  [{tag}] VT auth failed (http {http}) — API key "
+                  f"rejected, aborting run", flush=True)
+            sys.exit(1)
         if http == 0:
             fails += 1
             print(f"  [{tag}] CLI/network failure on {url[:70]}… "
@@ -233,8 +280,9 @@ def main(argv):
               flush=True)
         targets = [(mode, todo)]
 
+    state = {"last": 0.0}
     for tag, urls in targets:
-        done, quota_hit = process(urls, tag, cache, deadline, tag)
+        done, quota_hit = process(urls, tag, cache, deadline, tag, state)
         print(f"  [{tag}] finished: {done} processed, "
               f"cache now {len(cache):,} urls", flush=True)
         if quota_hit:

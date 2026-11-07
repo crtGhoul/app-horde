@@ -15,10 +15,10 @@ function fmtNum(n) {
   return String(n);
 }
 function daysLabel(d) {
-  if (d == null) return 'unknown';
-  if (d === 0) return 'today';
-  if (d === 1) return 'yesterday';
-  return d + ' days ago';
+  if (d == null) return tr('unknown');
+  if (d === 0) return tr('today');
+  if (d === 1) return tr('yesterday');
+  return tr('days_ago').replace('{n}', d);
 }
 /* fmtSize: build file size in bytes -> "228.4 MB". */
 function fmtSize(b) {
@@ -32,6 +32,217 @@ function imgFallback(el) {
   const fb = el.getAttribute('data-fb');
   if (fb) { el.setAttribute('data-fb', ''); el.src = fb; }
   else el.remove();
+}
+
+/* ---------- 2b. i18n — EN/ES UI chrome (guide prose stays English) --- */
+const STRINGS = {
+en: {
+  nav_guide:'[guide]', nav_home:'[home]', nav_faves:'[faves]', nav_top25:'[top 25]',
+  nav_changes:'[changes]',
+  changes_p:'Per-repo version changes from the latest weekly build — what each source added or dropped since the build before it.',
+  changes_meta:'build {d} · {n} repo changes', changes_none:'☠ no changes recorded yet — diffs start with the next weekly build.',
+  changes_new:'NEW APP',
+  nav_search:'[search]', nav_repos:'[repos]', nav_installer:'[installer]',
+  skip:'[ CLICK TO SKIP ]',
+  stat_apps:'APPS', stat_builds:'BUILDS', stat_sectors:'SECTORS', stat_sources:'SOURCES',
+  cta:'☣ NEW HERE? READ THE FIELD MANUAL →',
+  sec_fresh:'fresh drops', sec_editors:"editors' choice",
+  sec_latest:'latest updates',
+  latest_sub:'// build {d} · {n} repo changes — newest first',
+  latest_empty:'// no changes recorded yet — diffs start with the next weekly build.',
+  latest_all:'see all {n} updates →',
+  sub_editors:'// hand-picked by the horde keeper',
+  sec_browsecat:'browse categories', sec_browserepos:'browse repos',
+  sec_mostbuilds:'most builds', sec_toprated:'top rated apps',
+  sub_toprated:'// highest app-store ratings — 5,000+ reviews minimum, original app not the modded file',
+  inst_p:'Paste any direct .ipa link and get one-tap install buttons for every installer. No repo needed — if the URL serves an .ipa, this builds the deep links.',
+  inst_ph:'paste any .ipa url — https://…', inst_build:'BUILD ⏎',
+  inst_out:'// links appear here — nothing is uploaded, everything happens on your device',
+  repobtn:'☰ REPOS', q_ph:'> search the horde...  ( / )',
+  sort_alpha:'Name A–Z', sort_strains:'Most builds', sort_recent:'Recently updated',
+  sort_rated:'Top rated ★', srcf_all:'All repos',
+  myios_ph:'my iOS e.g. 17.4', myios_title:'enter your iOS version — apps that need newer get flagged',
+  empty_msg:'☠ NO APPS MATCH THIS QUERY', rm_head:'☰ BROWSE REPOS',
+  footer_unofficial:'unofficial builds — do your own research · use at your own risk',
+  today:'today', yesterday:'yesterday', days_ago:'{n} days ago', unknown:'unknown',
+  fresh_sub_n:'// {n} fresh this week — new builds landed in the last 7 days',
+  fresh_sub_0:'// no fresh builds this week — check back monday',
+  fresh_empty:'no fresh builds this week — check back monday',
+  faves_sub:'// {n} apps in your favorites',
+  top25_sub:'// ranked by real App Store review count — the closest thing to a popularity chart',
+  sel_word:'SELECT', category_word:'CATEGORY', pick_cat:'// pick a category to browse',
+  results_word:'RESULTS', matches_in_repo:' in this repo', matches_all:' across all categories',
+  apps_from_repo:'// {n} apps from this repo · ', apps_listed:'// {n} apps listed · ',
+  clear_x:'clear ×',
+  builds_badge:'BUILDS', unknown_uploader:'Unknown uploader', more_n:'+{n} more',
+  in_this_repo_s:'build in this repo', in_this_repo_p:'builds in this repo',
+  official_dev:'★ OFFICIAL DEV', fresh_badge:'FRESH', needs_ios:'⚠ NEEDS iOS {v}+',
+  all_links_dead:'☠ ALL LINKS DEAD', link_dead:'LINK DEAD',
+  dead_note:'this download was verified dead — try another build or source',
+  updated_word:'updated',
+  m_sources:'SOURCES', m_download:'DOWNLOAD', m_requires:'REQUIRES',
+  m_appstore:'APP STORE', m_screenshots:'SCREENSHOTS', m_verification:'VERIFICATION',
+  m_virustotal:'VIRUSTOTAL', m_updated:'UPDATED', m_size:'SIZE',
+  m_builds:'BUILDS INDEXED', m_tweaks:'TWEAKS', m_bundles:'BUNDLE IDS',
+  m_uploaders:'UPLOADERS', m_variants:'VARIANTS',
+  save:'☆ SAVE', saved:'★ SAVED', copy:'COPY', copied:'COPIED',
+  onetap:'one-tap install:', howto:'how to install',
+  dl_note:'Newest build is pre-selected — open the list to roll back to an older one. TIPA builds are for TrollStore. Pick a build, then tap your installer above for one-tap install. No installer? ⬇ GET downloads the file — open it in Scarlet manually. Unofficial build — verify the bundle ID and source before installing.',
+  build_s:'build', build_p:'builds', official_src:' ★ official dev source',
+  ratings_word:'ratings',
+  store_notfound:'✗ Not found on the App Store — treat with extra suspicion',
+  req_wont:"won't run on your iOS {v}",
+  v_match:'bundle id matches a real App Store listing',
+  v_nomatch:'no App Store match — treat with extra suspicion',
+  v_multi:'listed by {n} independent repos',
+  v_single:'listed by a single repo — deserves a harder look',
+  v_same:'build v{v} matches the current App Store release',
+  v_older:"build v{v} is older than the App Store's v{w} — outdated, may miss fixes",
+  v_newer:'build claims v{v} but the App Store is only on v{w} — suspicious, walk away',
+  v_caveat:'these checks catch fakes, not a well-made trojan — see the field manual',
+  vt_notscanned:'not scanned yet',
+  vt_mal:'{m}/{t} engines flagged this build as malicious{when} — do not install',
+  vt_susp:'{s}/{t} engines suspicious, none confirmed malicious{when}',
+  vt_clean:'✓ 0/{t} engines flagged{when}', vt_scanned:' · scanned {d}',
+  vt_pill_clean:'VT ✓ 0/{t}', vt_pill_susp:'VT ⚠ {s}/{t}', vt_pill_mal:'VT ☠ {m}/{t}',
+  vt_pill_none:'VT —',
+  fb_title:'☠ ONE-TAP NEEDS YOUR IPHONE',
+  fb_body:'That button opens {inst} on an iPhone — you are browsing on a computer or a browser that cannot open app links, so it would just fail here. Your options:',
+  fb_copyipa:'COPY THE .IPA LINK',
+  fb_getipa:'⬇ DOWNLOAD THE .IPA INSTEAD',
+  fb_phone:'OPEN THIS APP PAGE ON YOUR PHONE, THEN TAP THE BUTTON THERE:',
+  fb_copy:'COPY LINK',
+  fb_try:'I am on my iPhone — try the button anyway →',
+  fb_back:'← back to the app',
+  mirror:'also on:',
+  warn_text:'⚠ Unofficial builds. Verify hashes, use a throwaway Apple ID, and never sideload banking or 2FA apps from here.',
+  discuss:'💬 discuss this app', category_suffix:'CATEGORY',
+  safe_official:'Official developer source — the safest tier, run by the app makers themselves.',
+  safe_community:'Large community repo — widely used, but community-run. Check the app intel before installing.',
+  apps_indexed:'{n} apps indexed.',
+  radar_txt:'{n} of your starred apps have new builds — ', radar_view:'view them →',
+  inst_taplink:'tap to open in {label} — or copy the link', inst_open:'OPEN ↗',
+  inst_badurl:"that doesn't look like an http(s) url — paste the full link to the .ipa file.",
+  inst_notipa:"⚠ url doesn't end in .ipa — trying anyway.",
+  toolwatch:'☠ LATEST TOOL VERSIONS',
+  star_add:'Save to favorites', star_remove:'Remove from favorites',
+},
+es: {
+  nav_guide:'[guía]', nav_home:'[inicio]', nav_faves:'[favoritos]', nav_top25:'[top 25]',
+  nav_changes:'[cambios]',
+  changes_p:'Cambios de versión por repo de la compilación semanal más reciente — lo que cada fuente agregó o quitó desde la compilación anterior.',
+  changes_meta:'compilación {d} · {n} cambios en repos', changes_none:'☠ aún no hay cambios registrados — los diffs empiezan con la próxima compilación semanal.',
+  changes_new:'APP NUEVA',
+  nav_search:'[buscar]', nav_repos:'[repos]', nav_installer:'[instalador]',
+  skip:'[ TOCA PARA SALTAR ]',
+  stat_apps:'APPS', stat_builds:'VERSIONES', stat_sectors:'SECTORES', stat_sources:'FUENTES',
+  cta:'☣ ¿NUEVO AQUÍ? LEE EL MANUAL DE CAMPO →',
+  sec_fresh:'novedades', sec_editors:'selección del editor',
+  sec_latest:'últimas actualizaciones',
+  latest_sub:'// compilación {d} · {n} cambios en repos — los más recientes primero',
+  latest_empty:'// aún no hay cambios registrados — los diffs empiezan con la próxima compilación semanal.',
+  latest_all:'ver las {n} actualizaciones →',
+  sub_editors:'// elegidos a mano por el guardián de la horda',
+  sec_browsecat:'explorar categorías', sec_browserepos:'explorar repos',
+  sec_mostbuilds:'más versiones', sec_toprated:'apps mejor valoradas',
+  sub_toprated:'// mejores notas de la App Store — mínimo 5.000 reseñas, la app original no el archivo modificado',
+  inst_p:'Pega cualquier enlace directo .ipa y consigue botones de instalación en un toque para cada instalador. No necesitas repo — si la URL sirve un .ipa, esto crea los enlaces profundos.',
+  inst_ph:'pega cualquier url .ipa — https://…', inst_build:'CREAR ⏎',
+  inst_out:'// los enlaces aparecen aquí — no se sube nada, todo pasa en tu dispositivo',
+  repobtn:'☰ REPOS', q_ph:'> busca en la horda...  ( / )',
+  sort_alpha:'Nombre A–Z', sort_strains:'Más versiones', sort_recent:'Actualizados recientes',
+  sort_rated:'Mejor valorados ★', srcf_all:'Todos los repos',
+  myios_ph:'mi iOS ej. 17.4', myios_title:'pon tu versión de iOS — las apps que necesiten una más nueva se marcan',
+  empty_msg:'☠ NINGUNA APP COINCIDE CON ESTO', rm_head:'☰ EXPLORAR REPOS',
+  footer_unofficial:'versiones no oficiales — investiga por tu cuenta · úsalo bajo tu riesgo',
+  today:'hoy', yesterday:'ayer', days_ago:'hace {n} días', unknown:'desconocido',
+  fresh_sub_n:'// {n} novedades esta semana — versiones nuevas de los últimos 7 días',
+  fresh_sub_0:'// sin versiones nuevas esta semana — vuelve el lunes',
+  fresh_empty:'sin versiones nuevas esta semana — vuelve el lunes',
+  faves_sub:'// {n} apps en tus favoritos',
+  top25_sub:'// ordenado por reseñas reales de la App Store — lo más parecido a un ranking de popularidad',
+  sel_word:'ELIGE', category_word:'CATEGORÍA', pick_cat:'// elige una categoría para explorar',
+  results_word:'RESULTADOS', matches_in_repo:' en este repo', matches_all:' en todas las categorías',
+  apps_from_repo:'// {n} apps de este repo · ', apps_listed:'// {n} apps listadas · ',
+  clear_x:'borrar ×',
+  builds_badge:'VERSIONES', unknown_uploader:'Subidor desconocido', more_n:'+{n} más',
+  in_this_repo_s:'versión en este repo', in_this_repo_p:'versiones en este repo',
+  official_dev:'★ DEV OFICIAL', fresh_badge:'NUEVO', needs_ios:'⚠ NECESITA iOS {v}+',
+  all_links_dead:'☠ TODOS LOS ENLACES MUERTOS', link_dead:'ENLACE MUERTO',
+  dead_note:'esta descarga está verificada como muerta — prueba otra versión o fuente',
+  updated_word:'actualizado',
+  m_sources:'FUENTES', m_download:'DESCARGA', m_requires:'REQUIERE',
+  m_appstore:'APP STORE', m_screenshots:'CAPTURAS', m_verification:'VERIFICACIÓN',
+  m_virustotal:'VIRUSTOTAL', m_updated:'ACTUALIZADO', m_size:'TAMAÑO',
+  m_builds:'VERSIONES INDEXADAS', m_tweaks:'TWEAKS', m_bundles:'BUNDLE IDS',
+  m_uploaders:'SUBIDORES', m_variants:'VARIANTES',
+  save:'☆ GUARDAR', saved:'★ GUARDADO', copy:'COPIAR', copied:'COPIADO',
+  onetap:'instalación en un toque:', howto:'cómo instalar',
+  dl_note:'La versión más nueva viene preseleccionada — abre la lista para volver a una más vieja. Las versiones TIPA son para TrollStore. Elige una versión y toca tu instalador arriba para instalar en un toque. ¿Sin instalador? ⬇ GET descarga el archivo — ábrelo en Scarlet manualmente. Versión no oficial — verifica el bundle ID y la fuente antes de instalar.',
+  build_s:'versión', build_p:'versiones', official_src:' ★ fuente oficial del dev',
+  ratings_word:'reseñas',
+  store_notfound:'✗ No está en la App Store — trátalo con sospecha extra',
+  req_wont:'no funcionará en tu iOS {v}',
+  v_match:'el bundle id coincide con una app real de la App Store',
+  v_nomatch:'sin coincidencia en la App Store — trátalo con sospecha extra',
+  v_multi:'listada por {n} repos independientes',
+  v_single:'listada por un solo repo — merece una mirada más dura',
+  v_same:'la versión v{v} coincide con la actual de la App Store',
+  v_older:'la versión v{v} es más vieja que la v{w} de la App Store — desactualizada, puede faltarle arreglos',
+  v_newer:'la versión dice ser v{v} pero la App Store solo va en v{w} — sospechoso, aléjate',
+  v_caveat:'estos chequeos atrapan falsificaciones, no un troyano bien hecho — lee el manual de campo',
+  vt_notscanned:'aún no escaneado',
+  vt_mal:'{m}/{t} motores marcaron esta versión como maliciosa{when} — no lo instales',
+  vt_susp:'{s}/{t} motores sospechan, ninguno confirmó malicia{when}',
+  vt_clean:'✓ 0/{t} motores lo marcaron{when}', vt_scanned:' · escaneado el {d}',
+  vt_pill_clean:'VT ✓ 0/{t}', vt_pill_susp:'VT ⚠ {s}/{t}', vt_pill_mal:'VT ☠ {m}/{t}',
+  vt_pill_none:'VT —',
+  fb_title:'☠ LA INSTALACIÓN RÁPIDA NECESITA TU IPHONE',
+  fb_body:'Ese botón abre {inst} en un iPhone — estás navegando en una computadora o en un navegador que no puede abrir enlaces de apps, así que aquí solo fallaría. Tus opciones:',
+  fb_copyipa:'COPIAR EL ENLACE .IPA',
+  fb_getipa:'⬇ MEJOR DESCARGA EL .IPA',
+  fb_phone:'ABRE LA PÁGINA DE ESTA APP EN TU TELÉFONO Y TOCA EL BOTÓN ALLÁ:',
+  fb_copy:'COPIAR ENLACE',
+  fb_try:'Estoy en mi iPhone — probar el botón de todos modos →',
+  fb_back:'← volver a la app',
+  mirror:'también en:',
+  warn_text:'⚠ Versiones no oficiales. Verifica los hashes, usa un Apple ID desechable y nunca instales apps de banco o 2FA desde aquí.',
+  discuss:'💬 comenta esta app', category_suffix:'CATEGORÍA',
+  safe_official:'Fuente oficial del desarrollador — el nivel más seguro, lo llevan los propios creadores.',
+  safe_community:'Repo comunitario grande — muy usado, pero lo lleva la comunidad. Revisa el intel de la app antes de instalar.',
+  apps_indexed:'{n} apps indexadas.',
+  radar_txt:'{n} de tus apps favoritas tienen versiones nuevas — ', radar_view:'verlas →',
+  inst_taplink:'toca para abrir en {label} — o copia el enlace', inst_open:'ABRIR ↗',
+  inst_badurl:'eso no parece una url http(s) — pega el enlace completo al archivo .ipa.',
+  inst_notipa:'⚠ la url no termina en .ipa — intentándolo igual.',
+  toolwatch:'☠ ÚLTIMAS VERSIONES DE HERRAMIENTAS',
+  star_add:'Guardar en favoritos', star_remove:'Quitar de favoritos',
+}};
+let LANG = 'en';
+try { LANG = localStorage.getItem('horde_lang') === 'es' ? 'es' : 'en'; }
+catch (e) { /* private mode */ }
+function tr(k) {
+  const s = STRINGS[LANG];
+  return (s && s[k] != null) ? s[k] : (STRINGS.en[k] != null ? STRINGS.en[k] : k);
+}
+function applyLangStatic() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = STRINGS[LANG][el.getAttribute('data-i18n')];
+    if (v != null) el.textContent = v;
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const v = STRINGS[LANG][el.getAttribute('data-i18n-ph')];
+    if (v != null) el.placeholder = v;
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const v = STRINGS[LANG][el.getAttribute('data-i18n-title')];
+    if (v != null) el.title = v;
+  });
+  const lt = document.getElementById('langtoggle');
+  if (lt) lt.textContent = LANG === 'en' ? '[ES]' : '[EN]';
+  const esn = document.getElementById('esnote');
+  if (esn) esn.style.display = LANG === 'es' ? '' : 'none';
 }
 
 /* ---------- 3. Boot sequence ---------- */
@@ -150,40 +361,42 @@ function setTab(t, keepHash = false) {
   if (qi && qi.value) qi.value = '';
   document.querySelectorAll('.tab').forEach(b =>
     b.classList.toggle('active', b.dataset.t === t));
-  const guide = t === 'guide', inst = t === 'installer';
+  const guide = t === 'guide', inst = t === 'installer', chg = t === 'changes';
   document.getElementById('guidepanels').style.display = guide ? 'block' : 'none';
   document.getElementById('instpanels').style.display = inst ? 'block' : 'none';
-  sectTitle.style.display = (guide || inst) ? 'none' : '';
-  secSub.style.display = (guide || inst) ? 'none' : '';
-  document.getElementById('toolbar').style.display = (guide || inst) ? 'none' : '';
-  if (guide || inst) {
+  document.getElementById('changespanels').style.display = chg ? 'block' : 'none';
+  sectTitle.style.display = (guide || inst || chg) ? 'none' : '';
+  secSub.style.display = (guide || inst || chg) ? 'none' : '';
+  document.getElementById('toolbar').style.display = (guide || inst || chg) ? 'none' : '';
+  if (guide || inst || chg) {
     grid.style.display = 'none'; emptyMsg.style.display = 'none';
     document.getElementById('homepanels').style.display = 'none';
+    if (chg) renderChanges();
     window.scrollTo(0, 0);
   } else if (t === 'faves') {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
     sectTitle.innerHTML = '<span class="glitch" data-t="STARRED">STARRED</span> <span style="color:var(--blood)">APPS</span>';
-    secSub.textContent = '// ' + favs.size + ' apps in your favorites';
+    secSub.textContent = tr('faves_sub').replace('{n}', favs.size);
     render();
   } else if (t === 'top25') {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
     sectTitle.innerHTML = '<span class="glitch" data-t="TOP 25">TOP 25</span> <span style="color:var(--blood)">MOST WANTED</span>';
-    secSub.textContent = '// ranked by real App Store review count — the closest thing to a popularity chart';
+    secSub.textContent = tr('top25_sub');
     render();
   } else if (t === 'home') {
     grid.style.display = 'none'; emptyMsg.style.display = 'none';
     document.getElementById('homepanels').style.display = 'block';
-    sectTitle.innerHTML = 'SELECT <span class="glitch" data-t="CATEGORY">CATEGORY</span>';
-    secSub.textContent = '// pick a category to browse';
+    sectTitle.innerHTML = tr('sel_word') + ' <span class="glitch" data-t="CATEGORY">CATEGORY</span>';
+    secSub.textContent = tr('pick_cat');
   } else {
     document.getElementById('homepanels').style.display = 'none';
     grid.style.display = 'grid';
     sectTitle.innerHTML = '<span class="glitch" data-t="' + esc(t.toUpperCase()) + '">' +
-      esc(t.toUpperCase()) + '</span> <span style="color:var(--blood)">CATEGORY</span>';
-    secSub.innerHTML = '// ' + DB.counts[t] + ' apps listed · ' +
-      '<a href="#" id="clearcat" style="color:var(--toxic)">clear \u00d7</a>';
+      esc(t.toUpperCase()) + '</span> <span style="color:var(--blood)">' + tr('category_word') + '</span>';
+    secSub.innerHTML = tr('apps_listed').replace('{n}', DB.counts[t]) +
+      '<a href="#" id="clearcat" style="color:var(--toxic)">' + tr('clear_x') + '</a>';
     const cc = document.getElementById('clearcat');
     if (cc) cc.onclick = e => { e.preventDefault(); setTab('home'); };
     render();
@@ -218,22 +431,65 @@ function top25() {
   top.forEach((a, i) => { a._rank = i + 1; });
   return top;
 }
-/* Search matches name, uploader, or any bundle ID — shared by the
-   top-25 chart and the regular category/repo grids. */
-function matchesQuery(a, needle) {
-  return a.name.toLowerCase().includes(needle) ||
-    (a.dev || '').toLowerCase().includes(needle) ||
-    a.bundle.some(b => b.toLowerCase().includes(needle));
+/* Search: tokenized fuzzy match against the app name (WP4). A name
+   matches when every query token matches some name token — substring,
+   or Levenshtein within budget (<=1 edit for tokens >=4 chars, <=2 for
+   >=7). Name tokens are precomputed once in buildAppIndex (a._ntoks).
+   Score: 0 = full-query substring of the name (exact/prefix territory),
+   1 = token substring or dev/bundle hit, 2 = needed fuzzy edits.
+   -1 = no match. Lower ranks first; the active sort breaks ties. */
+function lev(a, b, max) {
+  const la = a.length, lb = b.length;
+  if (Math.abs(la - lb) > max) return max + 1;
+  let prev = [];
+  for (let j = 0; j <= lb; j++) prev.push(j);
+  for (let i = 1; i <= la; i++) {
+    const cur = [i];
+    let rowMin = i;
+    for (let j = 1; j <= lb; j++) {
+      const v = Math.min(prev[j] + 1, cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      cur.push(v);
+      if (v < rowMin) rowMin = v;
+    }
+    if (rowMin > max) return max + 1;
+    prev = cur;
+  }
+  return prev[lb];
+}
+function matchesQuery(a, qtoks, qraw) {
+  if (qraw && a.name.toLowerCase().includes(qraw)) return 0;
+  if (qraw && ((a.dev || '').toLowerCase().includes(qraw) ||
+      a.bundle.some(b => b.toLowerCase().includes(qraw)))) return 1;
+  const ntoks = a._ntoks || [];
+  let fuzzy = false;
+  for (const qt of qtoks) {
+    let hit = false;
+    for (const nt of ntoks) if (nt.includes(qt)) { hit = true; break; }
+    if (!hit && qt.length >= 4) {
+      const budget = qt.length >= 7 ? 2 : 1;
+      for (const nt of ntoks) {
+        if (Math.abs(nt.length - qt.length) <= budget &&
+            lev(qt, nt, budget) <= budget) { hit = true; fuzzy = true; break; }
+      }
+    }
+    if (!hit) return -1;
+  }
+  return fuzzy ? 2 : 1;
+}
+function sortCmp() {
+  const rateScore = a => (a.it && a.it.c >= 5000) ? a.it.r : -1;
+  if (sortMode === 'strains') return (x, y) => y.n - x.n;
+  if (sortMode === 'recent') return (x, y) => (x.upd ?? 1e9) - (y.upd ?? 1e9);
+  if (sortMode === 'rated') return (x, y) => rateScore(y) - rateScore(x);
+  return (x, y) => x.name.localeCompare(y.name);
 }
 function filtered() {
   if (tab === 'top25') {
     let apps = top25();
     if (srcFilter !== 'all')
       apps = apps.filter(a => a.src.includes(srcFilter));
-    if (q) {
-      const needle = q.toLowerCase();
-      apps = apps.filter(a => matchesQuery(a, needle));
-    }
+    if (q) apps = applyQuery(apps, null);
     return apps;
   }
   // any query searches the entire horde, not just the current category
@@ -241,17 +497,24 @@ function filtered() {
              : tab === 'faves' ? favApps() : DB.cats[tab] || [];
   if (srcFilter !== 'all')
     apps = apps.filter(a => a.src.includes(srcFilter));
-  if (q) {
-    const needle = q.toLowerCase();
-    apps = apps.filter(a => matchesQuery(a, needle));
-  }
+  if (q) return applyQuery(apps, tab === 'faves' ? null : sortCmp());
+  if (tab === 'faves') return apps.slice();  // shelf order (WP8), no re-sort
   const arr = apps.slice();
-  const rateScore = a => (a.it && a.it.c >= 5000) ? a.it.r : -1;
-  if (sortMode === 'strains') arr.sort((x, y) => y.n - x.n);
-  else if (sortMode === 'recent') arr.sort((x, y) => (x.upd ?? 1e9) - (y.upd ?? 1e9));
-  else if (sortMode === 'rated') arr.sort((x, y) => rateScore(y) - rateScore(x));
-  else arr.sort((x, y) => x.name.localeCompare(y.name));
+  arr.sort(sortCmp());
   return arr;
+}
+/* Score-filter + rank a query result set. cmp (nullable) breaks score
+   ties; Array.sort is stable, so a null cmp keeps the incoming order. */
+function applyQuery(apps, cmp) {
+  const qraw = q.toLowerCase();
+  const qtoks = qraw.split(/[^a-z0-9]+/).filter(Boolean);
+  const scored = [];
+  for (const a of apps) {
+    const s = matchesQuery(a, qtoks, qraw);
+    if (s >= 0) scored.push([s, a]);
+  }
+  scored.sort((x, y) => (x[0] - y[0]) || (cmp ? cmp(x[1], y[1]) : 0));
+  return scored.map(p => p[1]);
 }
 
 /* Source badges driven by DB.srcmeta so new repos need no code changes. */
@@ -274,36 +537,52 @@ function cardHTML(a) {
   const szpill = a.sz ? `<span class="pill">${fmtSize(a.sz)}</span>` : '';
   let pills = '';
   let repoInfo = '';
-  
+
   if (tab === 'repo' && srcFilter !== 'all') {
     const others = a.src.filter(s => s !== srcFilter);
     pills = srcBadge(srcFilter, true);
     if (others.length > 0) {
       const tooltips = others.map(s => ((DB.srcmeta || {})[s] || {}).label || s.toUpperCase()).join(', ');
-      pills += `<span class="pill" title="${esc(tooltips)}">+${others.length} more</span>`;
+      pills += `<span class="pill" title="${esc(tooltips)}">${tr('more_n').replace('{n}', others.length)}</span>`;
     }
-    
+
     // a.vh[srcFilter][0] gives [version, date, url]
     // a.per[srcFilter] gives build count
     const vh = (a.vh && a.vh[srcFilter]) ? a.vh[srcFilter][0] : null;
     const count = (a.per && a.per[srcFilter] != null) ? a.per[srcFilter] : 1;
     if (vh) {
-      repoInfo = `<div class="d">v${esc(vh[0] || '?')} · updated ${esc(vh[1] || 'unknown')} · ${count} build${count === 1 ? '' : 's'} in this repo</div>`;
+      repoInfo = `<div class="d">v${esc(vh[0] || '?')} · ${tr('updated_word')} ${esc(vh[1] || tr('unknown'))} · ${count} ${tr(count === 1 ? 'in_this_repo_s' : 'in_this_repo_p')}</div>`;
     }
   } else {
     pills = a.src.map(s => srcBadge(s)).join('');
   }
-  
-  pills += (hasOfficial(a) ? '<span class="src s-official">★ OFFICIAL DEV</span>' : '')
-    + ((a.upd != null && a.upd <= 30) ? '<span class="src s-fresh">FRESH</span>' : '')
-    + (tooNew(a) ? `<span class="src s-noios">⚠ NEEDS iOS ${esc(reqIos(a))}+</span>` : '');
-  
+
+  pills += (hasOfficial(a) ? `<span class="src s-official">${tr('official_dev')}</span>` : '')
+    + vtPill(a)
+    + ((a.upd != null && a.upd <= 30) ? `<span class="src s-fresh">${tr('fresh_badge')}</span>` : '')
+    + (tooNew(a) ? `<span class="src s-noios">${tr('needs_ios').replace('{v}', esc(reqIos(a)))}</span>` : '');
+
+  /* WP2: card marker when every build's download is known-dead */
+  if (a.dead && a.dead.length) {
+    const deadSet = new Set(a.dead);
+    const urls = [];
+    Object.values(a.vh || {}).forEach(l =>
+      l.forEach(v => { if (v[2]) urls.push(v[2]); }));
+    if (urls.length && urls.every(u => deadSet.has(u)))
+      pills += `<span class="src s-dead">${tr('all_links_dead')}</span>`;
+  }
+
   const tweak = a.tweak ? `<div class="tp">${esc(a.tweak)}</div>` : '';
   const fav = favs.has(a.name);
-  return `<div class="card${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
-    <div class="badge">${a.n} BUILDS</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
-    <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}${szpill}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" aria-label="${fav ? 'Remove from favorites' : 'Save to favorites'}" aria-pressed="${fav ? 'true' : 'false'}">${fav ? '★' : '☆'}</button></div></div>
-    <div class="d">${esc(a.dev || 'Unknown uploader')}</div>
+  /* WP8: shelf controls only on the faves tab */
+  const moveBtns = tab === 'faves'
+    ? `<span class="favmove"><button class="fmv" data-name="${esc(a.name)}" data-dir="-1" aria-label="move up">▲</button><button class="fmv" data-name="${esc(a.name)}" data-dir="1" aria-label="move down">▼</button></span>`
+    : '';
+  const drag = tab === 'faves' ? ' draggable="true"' : '';
+  return `<div class="card${tooNew(a) ? ' oldios' : ''}"${drag} data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">
+    <div class="badge">${a.n} ${tr('builds_badge')}</div>${(tab === 'top25' && a._rank) ? `<div class="badge rank">#${a._rank} · ${fmtCount(a.it.c)} REVIEWS</div>` : ''}
+    <div class="chd">${icon}<div class="n">${esc(a.name)} ${rate}${szpill}<button class="fstar${fav ? ' on' : ''}" data-name="${esc(a.name)}" aria-label="${fav ? tr('star_remove') : tr('star_add')}" aria-pressed="${fav ? 'true' : 'false'}">${fav ? '★' : '☆'}</button>${moveBtns}</div></div>
+    <div class="d">${esc(a.dev || tr('unknown_uploader'))}</div>
     ${repoInfo}
     <div class="pd">${pills}</div>
     ${tweak}
@@ -333,10 +612,10 @@ function freshRowHTML(a) {
     ? `<img class="fic" loading="lazy" decoding="async" src="${esc(a.icon)}" data-fb="${esc(a.fb || '')}" onerror="imgFallback(this)" alt="">`
     : '';
   const pills = a.src.map(srcBadge).join('')
-    + (tooNew(a) ? `<span class="src s-noios">⚠ NEEDS iOS ${esc(reqIos(a))}+</span>` : '');
+    + (tooNew(a) ? `<span class="src s-noios">${tr('needs_ios').replace('{v}', esc(reqIos(a)))}</span>` : '');
   return `<div class="frow${tooNew(a) ? ' oldios' : ''}" data-name="${esc(a.name)}" data-sector="${esc(a.sector)}">`
     + `${icon}<div class="fn"><b>${esc(a.name)}</b><span class="fv">v${esc(a.lv || '?')}</span></div>`
-    + `<span class="fwhen">updated ${esc(daysLabel(a.upd))}</span>`
+    + `<span class="fwhen">${tr('updated_word')} ${esc(daysLabel(a.upd))}</span>`
     + `<div class="fsrc">${pills}</div></div>`;
 }
 function paintFresh() {
@@ -345,11 +624,11 @@ function paintFresh() {
   if (!list || !sub) return;
   const drops = freshDrops();
   sub.textContent = drops.length
-    ? `// ${drops.length} fresh this week — new builds landed in the last 7 days`
-    : '// no fresh builds this week — check back monday';
+    ? tr('fresh_sub_n').replace('{n}', drops.length)
+    : tr('fresh_sub_0');
   list.innerHTML = drops.length
     ? drops.map(freshRowHTML).join('')
-    : '<p class="fempty">no fresh builds this week — check back monday</p>';
+    : '<p class="fempty">' + tr('fresh_empty') + '</p>';
 }
 
 /* Renders 60 cards per animation frame so huge categories don't jank.
@@ -361,12 +640,23 @@ function render() {
   grid.innerHTML = '';
   emptyMsg.style.display = apps.length ? 'none' : 'block';
   if (q) {
-    sectTitle.innerHTML = '<span class="glitch" data-t="RESULTS">RESULTS</span>';
-    secSub.textContent = '// ' + apps.length + ' matches' +
-      (tab === 'repo' ? ' in this repo' : ' across all categories');
+    sectTitle.innerHTML = '<span class="glitch" data-t="RESULTS">' + tr('results_word') + '</span>';
+    secSub.textContent = '// ' + apps.length +
+      (tab === 'repo' ? tr('matches_in_repo') : tr('matches_all'));
   } else if (tab === 'repo') {
     paintRepoHeader(apps.length);
   }
+  /* Prompt 20 v2: category grouping — global search results (home tab
+     with a query) render grouped under category headers. The sort is
+     stable, so match rank is preserved inside each group. */
+  const grouped = (tab === 'home' && !!q);
+  const ordered = grouped
+    ? [...apps].sort((x, y) => (x.sector || '').localeCompare(y.sector || ''))
+    : apps;
+  const groupCounts = {};
+  if (grouped) for (const a of ordered)
+    groupCounts[a.sector] = (groupCounts[a.sector] || 0) + 1;
+  let lastSec = null;
   let i = 0;
   const io = new IntersectionObserver(es => es.forEach(e => {
     if (e.isIntersecting) { e.target.classList.add('vis'); io.unobserve(e.target); }
@@ -374,26 +664,66 @@ function render() {
   (function chunk() {
     if (my !== renderToken) return;
     const frag = document.createDocumentFragment();
-    const end = Math.min(i + 60, apps.length);
+    const end = Math.min(i + 60, ordered.length);
     for (; i < end; i++) {
+      if (grouped && ordered[i].sector !== lastSec) {
+        lastSec = ordered[i].sector;
+        const h = document.createElement('div');
+        h.className = 'gridhead';
+        h.textContent = '☠ ' + (lastSec || '').toUpperCase() +
+          ' — ' + groupCounts[lastSec];
+        frag.appendChild(h);
+      }
       const w = document.createElement('div');
-      w.innerHTML = cardHTML(apps[i]);
+      w.innerHTML = cardHTML(ordered[i]);
       const card = w.firstChild;
       frag.appendChild(card); io.observe(card);
     }
     grid.appendChild(frag);
-    if (i < apps.length) requestAnimationFrame(chunk);
+    if (i < ordered.length) requestAnimationFrame(chunk);
   })();
 }
 
 /* Favorite stars and card clicks behave the same on every grid. */
 function cardAreaClick(e) {
+  const mv = e.target.closest('.fmv');
+  if (mv) { e.stopPropagation(); moveFav(mv.dataset.name, +mv.dataset.dir); return; }
   const fs = e.target.closest('.fstar');
   if (fs) { e.stopPropagation(); toggleFav(fs.dataset.name); return; }
   const card = e.target.closest('.card');
   if (card) openModal(card.dataset.name, card.dataset.sector);
 }
 grid.addEventListener('click', cardAreaClick);
+
+/* WP8: drag-to-reorder on the faves shelf (HTML5 drag events; the ▲▼
+   buttons on each faves card cover touch devices). */
+let dragName = null;
+grid.addEventListener('dragstart', e => {
+  if (tab !== 'faves') return;
+  const card = e.target.closest('.card');
+  if (!card) return;
+  dragName = card.dataset.name;
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', dragName); } catch (err) {}
+});
+grid.addEventListener('dragover', e => {
+  if (tab !== 'faves' || !dragName) return;
+  const card = e.target.closest('.card');
+  if (!card || card.dataset.name === dragName) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+});
+grid.addEventListener('drop', e => {
+  if (tab !== 'faves' || !dragName) return;
+  const card = e.target.closest('.card');
+  if (!card) { dragName = null; return; }
+  e.preventDefault();
+  const rect = card.getBoundingClientRect();
+  const after = (e.clientY - rect.top) > rect.height / 2;
+  reorderFav(dragName, card.dataset.name, after);
+  dragName = null;
+});
+grid.addEventListener('dragend', () => { dragName = null; });
 
 /* ---------- 9. Favorites ---------- */
 let favs = new Set();
@@ -403,16 +733,30 @@ function saveFavs() {
   try { localStorage.setItem('horde_favs', JSON.stringify([...favs])); }
   catch (e) { /* non-fatal */ }
 }
+/* WP8 shelves: the user's own ordering of the faves tab, persisted as a
+   name list. New favorites append at the end; the list is pruned to
+   current favorites whenever favApps() runs. */
+let favorder = [];
+try { favorder = JSON.parse(localStorage.getItem('horde_favorder') || '[]'); }
+catch (e) { /* private mode etc. */ }
+if (!Array.isArray(favorder)) favorder = [];
+function saveFavorder() {
+  try { localStorage.setItem('horde_favorder', JSON.stringify(favorder)); }
+  catch (e) { /* non-fatal */ }
+}
 function toggleFav(name) {
   if (favs.has(name)) {
     favs.delete(name);
     delete favseen[name];
+    favorder = favorder.filter(n => n !== name);
   } else {
     favs.add(name);
+    if (!favorder.includes(name)) favorder.push(name);
     const hit = appIndex.get(name);
     if (hit && hit.app.upd != null) favseen[name] = hit.app.upd;
   }
   saveFavs();
+  saveFavorder();
   saveFavseen();
   syncFavUI();
 }
@@ -422,25 +766,49 @@ function syncFavUI() {
     b.textContent = on ? '★' : '☆';
     b.classList.toggle('on', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    b.setAttribute('aria-label', on ? 'Remove from favorites' : 'Save to favorites');
+    b.setAttribute('aria-label', on ? tr('star_remove') : tr('star_add'));
   });
   const mf = document.getElementById('mfav');
   if (mf) {
     const on = favs.has(mf.dataset.name);
-    mf.textContent = on ? '★ SAVED' : '☆ SAVE';
+    mf.textContent = on ? tr('saved') : tr('save');
     mf.classList.toggle('on', on);
     mf.setAttribute('aria-pressed', on ? 'true' : 'false');
   }
   if (tab === 'faves') {
-    secSub.textContent = '// ' + favs.size + ' apps in your favorites';
+    secSub.textContent = tr('faves_sub').replace('{n}', favs.size);
     render();
   }
 }
 function favApps() {
-  const out = [];
+  const byName = new Map();
   Object.values(DB.cats).forEach(arr =>
-    arr.forEach(x => { if (favs.has(x.name)) out.push(x); }));
-  return out;
+    arr.forEach(x => { if (favs.has(x.name) && !byName.has(x.name)) byName.set(x.name, x); }));
+  // shelf order: keep stored order for current favs, append new ones
+  const keep = favorder.filter(n => byName.has(n));
+  let changed = keep.length !== favorder.length;
+  for (const n of byName.keys())
+    if (!keep.includes(n)) { keep.push(n); changed = true; }
+  if (changed) { favorder = keep; saveFavorder(); }
+  return keep.map(n => byName.get(n)).filter(Boolean);
+}
+function moveFav(name, dir) {
+  const i = favorder.indexOf(name);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= favorder.length) return;
+  [favorder[i], favorder[j]] = [favorder[j], favorder[i]];
+  saveFavorder();
+  render();
+}
+function reorderFav(name, target, after) {
+  const arr = favorder.filter(n => n !== name);
+  let i = arr.indexOf(target);
+  if (i < 0) return;
+  if (after) i++;
+  arr.splice(i, 0, name);
+  favorder = arr;
+  saveFavorder();
+  render();
 }
 /* ---------- 9b. Favorites update radar ----------
    horde_favseen: {appName: updDays} — the freshness each favorite had when
@@ -470,8 +838,8 @@ function paintFavRadar() {
   const d = document.createElement('div');
   d.id = 'favradar';
   d.innerHTML = `<button class="rdx" aria-label="dismiss">\u2715</button>` +
-    `<b>\u2623 RADAR:</b> ${n} of your starred apps have new builds \u2014 ` +
-    `<a id="rgoview">view them \u2192</a>`;
+    `<b>\u2623 RADAR:</b> ${tr('radar_txt').replace('{n}', n)}` +
+    `<a id="rgoview">${tr('radar_view')}</a>`;
   hp.insertBefore(d, hp.firstChild);
   d.querySelector('.rdx').onclick = () => {
     try { sessionStorage.setItem('horde_radardx', '1'); } catch (e) {}
@@ -488,18 +856,20 @@ function srcRows(a) {
   return (a.src || []).map(s => {
     const n = (a.per && a.per[s] != null) ? a.per[s]
       : s === 'alans' ? a.nA : s === 'apptesters' ? a.nT : null;
-    const off = ((DB.srcmeta || {})[s] || {}).official ? ' ★ official dev source' : '';
-    return srcBadge(s) + (n != null ? ` ${n} build${n === 1 ? '' : 's'}` : '') + off;
+    const off = ((DB.srcmeta || {})[s] || {}).official ? tr('official_src') : '';
+    return srcBadge(s) + (n != null ? ` ${n} ${tr(n === 1 ? 'build_s' : 'build_p')}` : '') + off;
   }).join('<br>');
 }
 function reqIosRow(a) {
   let s = 'iOS ' + esc(reqIos(a)) + '+';
   if (tooNew(a))
-    s += ` — <span style="color:var(--blood)">won't run on your iOS ${esc(myIos)}</span>`;
+    s += ` — <span style="color:var(--blood)">${tr('req_wont').replace('{v}', esc(myIos))}</span>`;
   return s;
 }
 function shotsRow(a) {
-  const ss = (a.it && a.it.ss) || [];
+  /* WP6: prefer the baked `shots` field; fall back to the App Store
+     record's ss list (older datasets). */
+  const ss = (a.shots && a.shots.length) ? a.shots : ((a.it && a.it.ss) || []);
   if (!ss.length) return '';
   return `<div class="shots">` + ss.map(u =>
     `<a href="${esc(u)}" target="_blank" rel="noopener"><img loading="lazy" decoding="async" src="${esc(u)}" alt="App Store screenshot"></a>`
@@ -510,10 +880,10 @@ function storeRow(a) {
     const stars = '★ ' + a.it.r.toFixed(1);
     return `✓ <b style="color:var(--toxic)">${esc(a.it.name)}</b> — ` +
       `<span style="color:var(--amber)">${stars}</span> · ` +
-      `${fmtNum(a.it.c)} ratings · ${esc(a.it.g || 'App Store')}` +
+      `${fmtNum(a.it.c)} ${tr('ratings_word')} · ${esc(a.it.g || 'App Store')}` +
       (a.it.v ? ` · v${esc(a.it.v)}` : '');
   }
-  return '✗ Not found on the App Store — treat with extra suspicion';
+  return tr('store_notfound');
 }
 function cmpVer(x, y) {
   // Compare dotted version strings. Returns -1/0/1, or null if unparseable.
@@ -531,20 +901,20 @@ function verifyRow(a) {
   const ok = 'color:var(--toxic)', warn = 'color:var(--amber)', bad = 'color:var(--blood)';
   const bits = [];
   bits.push(a.it
-    ? `<span style="${ok}">✓</span> bundle id matches a real App Store listing`
-    : `<span style="${bad}">✗</span> no App Store match — treat with extra suspicion`);
+    ? `<span style="${ok}">✓</span> ${tr('v_match')}`
+    : `<span style="${bad}">✗</span> ${tr('v_nomatch')}`);
   const ns = (a.src || []).length;
   bits.push(ns > 1
-    ? `<span style="${ok}">✓</span> listed by ${ns} independent repos`
-    : `<span style="${warn}">⚠</span> listed by a single repo — deserves a harder look`);
+    ? `<span style="${ok}">✓</span> ${tr('v_multi').replace('{n}', ns)}`
+    : `<span style="${warn}">⚠</span> ${tr('v_single')}`);
   if (a.it && a.it.v && a.lv) {
     const c = cmpVer(a.lv, a.it.v);
     const sameDigits = String(a.lv).replace(/[^0-9]/g, '') === String(a.it.v).replace(/[^0-9]/g, '');
-    if (c === 0 || sameDigits) bits.push(`<span style="${ok}">✓</span> build v${esc(a.lv)} matches the current App Store release`);
-    else if (c === -1) bits.push(`<span style="${warn}">⚠</span> build v${esc(a.lv)} is older than the App Store's v${esc(a.it.v)} — outdated, may miss fixes`);
-    else if (c === 1) bits.push(`<span style="${bad}">☠</span> build claims v${esc(a.lv)} but the App Store is only on v${esc(a.it.v)} — suspicious, walk away`);
+    if (c === 0 || sameDigits) bits.push(`<span style="${ok}">✓</span> ${tr('v_same').replace('{v}', esc(a.lv))}`);
+    else if (c === -1) bits.push(`<span style="${warn}">⚠</span> ${tr('v_older').replace('{v}', esc(a.lv)).replace('{w}', esc(a.it.v))}`);
+    else if (c === 1) bits.push(`<span style="${bad}">☠</span> ${tr('v_newer').replace('{v}', esc(a.lv)).replace('{w}', esc(a.it.v))}`);
   }
-  bits.push(`<span style="${warn}">⚠</span> these checks catch fakes, not a well-made trojan — see the field manual`);
+  bits.push(`<span style="${warn}">⚠</span> ${tr('v_caveat')}`);
   (a.risk || []).forEach(r => {
     const lvl = r[0] === 'bad' ? bad : warn;
     const glyph = r[0] === 'bad' ? '☠' : '⚠';
@@ -558,12 +928,24 @@ function vtRow(a) {
   const ok = 'color:var(--toxic)', warn = 'color:var(--amber)',
         bad = 'color:var(--blood)', dim = 'color:var(--muted)';
   const v = a.vt;
-  if (!v) return `<span style="${dim}">not scanned yet</span>`;
-  const t = v.t || 0, m = v.m || 0, s = v.s || 0;
-  const when = v.d ? ' · scanned ' + esc(vtDate(v.d)) : '';
-  if (m > 0) return `<span style="${bad}">☠ ${m}/${t} engines flagged this build as malicious${when} — do not install</span>`;
-  if (s > 0) return `<span style="${warn}">⚠ ${s}/${t} engines suspicious, none confirmed malicious${when}</span>`;
-  return `<span style="${ok}">✓ 0/${t} engines flagged${when}</span>`;
+  if (!v) return `<span style="${dim}">${tr('vt_notscanned')}</span>`;
+  const tt = v.t || 0, m = v.m || 0, s = v.s || 0;
+  const when = v.d ? tr('vt_scanned').replace('{d}', esc(vtDate(v.d))) : '';
+  if (m > 0) return `<span style="${bad}">☠ ${tr('vt_mal').replace('{m}', m).replace('{t}', tt).replace('{when}', when)}</span>`;
+  if (s > 0) return `<span style="${warn}">⚠ ${tr('vt_susp').replace('{s}', s).replace('{t}', tt).replace('{when}', when)}</span>`;
+  return `<span style="${ok}">${tr('vt_clean').replace('{t}', tt).replace('{when}', when)}</span>`;
+}
+/* Prompt 20: security rating pill, driven ONLY by the real vt_cache verdict
+   baked into a.vt (newest build). No cache entry -> neutral "VT —" pill,
+   never an invented verdict. */
+function vtPill(a) {
+  const v = a.vt;
+  if (!v) return `<span class="vtp none" title="${esc(tr('vt_notscanned'))}">${tr('vt_pill_none')}</span>`;
+  const tt = v.t || 0, m = v.m || 0, s = v.s || 0;
+  const when = v.d ? tr('vt_scanned').replace('{d}', esc(vtDate(v.d))) : '';
+  if (m > 0) return `<span class="vtp mal" title="${esc(tr('vt_mal').replace('{m}', m).replace('{t}', tt).replace('{when}', when))}">${tr('vt_pill_mal').replace('{m}', m).replace('{t}', tt)}</span>`;
+  if (s > 0) return `<span class="vtp susp" title="${esc(tr('vt_susp').replace('{s}', s).replace('{t}', tt).replace('{when}', when))}">${tr('vt_pill_susp').replace('{s}', s).replace('{t}', tt)}</span>`;
+  return `<span class="vtp clean" title="${esc(tr('vt_clean').replace('{t}', tt).replace('{when}', when))}">${tr('vt_pill_clean').replace('{t}', tt)}</span>`;
 }
 function vtDate(iso) {
   const M = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun',
@@ -604,6 +986,62 @@ function installerLink(inst, ipaUrl) {
   // iOS Safari drops raw custom schemes — bounce through an https redirector
   return REDIRECTOR + encodeURIComponent(deep);
 }
+/* Prompt 20: one-tap fallback. Custom-scheme deep links only work on an
+   iPhone/iPad — on a desktop browser (or anything that can't open app
+   links) they fail silently. Detect non-iOS and show a fallback panel
+   with working alternatives instead of sending the user nowhere. */
+function isIOS() {
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/i.test(ua)) return true;
+  /* iPadOS reports a Mac UA; multi-touch gives it away */
+  if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return true;
+  return false;
+}
+function tryInstall(inst, ipaUrl, backFn) {
+  if (isIOS()) { window.location.href = installerLink(inst, ipaUrl); return; }
+  showInstallFallback(inst, ipaUrl, backFn);
+}
+function showInstallFallback(inst, ipaUrl, backFn) {
+  const label = (INSTS.find(([k]) => k === inst) || [])[1] || inst;
+  const phoneUrl = modalCtx
+    ? location.origin + location.pathname + '#app=' + encodeURIComponent(modalCtx.name)
+    : location.origin + location.pathname;
+  mbody.innerHTML = `
+    <button class="mx" id="mx" aria-label="Close modal">✕</button>
+    <h3>${tr('fb_title')}</h3>
+    <p style="margin:12px 0;line-height:1.7">${tr('fb_body').replace('{inst}', esc(label))}</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0">
+      <button class="gbtn" id="fbcopy">${tr('fb_copyipa')}</button>
+      <button class="gbtn" id="fbget">${tr('fb_getipa')}</button>
+    </div>
+    <p class="dim" style="line-height:1.7">${tr('fb_phone')}</p>
+    <div class="bid"><code>${esc(phoneUrl)}</code><button class="cpy" id="fbphonecopy">${tr('fb_copy')}</button></div>
+    <p style="margin-top:14px"><a href="#" id="fbtry" style="color:var(--toxic)">${tr('fb_try')}</a></p>
+    ${backFn ? `<p style="margin-top:8px"><a href="#" id="fbback" style="color:var(--toxic)">${tr('fb_back')}</a></p>` : ''}`;
+  document.getElementById('mx').onclick = closeModal;
+  const cp = (txt, btn) => {
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(txt);
+    btn.textContent = tr('copied');
+    setTimeout(() => btn.textContent = btn.dataset.k, 1200);
+  };
+  const b1 = document.getElementById('fbcopy');
+  b1.dataset.k = b1.textContent;
+  b1.onclick = () => cp(ipaUrl, b1);
+  const b2 = document.getElementById('fbphonecopy');
+  b2.dataset.k = b2.textContent;
+  b2.onclick = () => cp(phoneUrl, b2);
+  document.getElementById('fbget').onclick = () => window.open(ipaUrl, '_blank');
+  document.getElementById('fbtry').onclick = e => {
+    e.preventDefault();
+    window.location.href = installerLink(inst, ipaUrl);
+  };
+  if (backFn) document.getElementById('fbback').onclick = e => {
+    e.preventDefault(); backFn();
+  };
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
 /* Per-installer 3-step mini guides, rendered inside the modal's DOWNLOAD row. */
 const INSTALL_GUIDES = {
   altstore: [
@@ -634,19 +1072,22 @@ const INSTALL_GUIDES = {
 };
 function dlRow(a) {
   const parts = [];
+  const deadSet = a.dead ? new Set(a.dead) : null;
   const mk = (list, src, hi = false) => {
     if (!list || !list.length) return;
     const badge = srcBadge(src, hi);
     const opts = list.map((v, i) => {
       const tipa = v[2].toLowerCase().includes('.tipa') ? ' · TIPA' : '';
-      return `<option value="${i}">${esc(v[0] || '?')}${tipa} · ${esc(v[1] || 'undated')}</option>`;
+      const dead = (deadSet && deadSet.has(v[2])) ? ' · ☠ ' + tr('link_dead') : '';
+      return `<option value="${i}">${esc(v[0] || '?')}${tipa} · ${esc(v[1] || tr('unknown'))}${dead}</option>`;
     }).join('');
     parts.push(`<div class="vsrc">${badge}` +
       `<select data-vsrc="${src}" aria-label="pick a build">${opts}</select>` +
       `<button class="gbtn sm vget" data-vsrc="${src}">⬇ GET</button>` +
       `<button class="vdead" data-vsrc="${src}" title="report dead link">⚠</button></div>` +
       `<div class="vlog" data-vsrc="${src}" style="display:none"></div>` +
-      `<div class="vinst"><span class="dim">one-tap install:</span>` +
+      `<div class="vmirror" data-vsrc="${src}" style="display:none"></div>` +
+      `<div class="vinst"><span class="dim">${tr('onetap')}</span>` +
       INSTS.map(([k, label]) =>
         `<button class="gbtn sm vinstbtn" data-vsrc="${src}" data-inst="${k}">${label}</button>`
       ).join('') + `</div>`);
@@ -663,52 +1104,55 @@ function dlRow(a) {
   }
 
   if (!parts.length) return '—';
-  const guideHtml = `<details class="iguide"><summary>how to install</summary>` +
+  const guideHtml = `<details class="iguide"><summary>${tr('howto')}</summary>` +
     INSTS.map(([k, label]) => `<b>${label}</b><ol>` +
       (INSTALL_GUIDES[k] || []).map(s => `<li>${esc(s)}</li>`).join('') +
       `</ol>`).join('') + `</details>`;
   return parts.join('') +
-    `<div class="dim" style="margin-top:8px">Newest build is pre-selected — open the list to roll back to an older one. ` +
-    `TIPA builds are for TrollStore. Pick a build, then tap your installer above for one-tap install. No installer? ⬇ GET downloads the file — open it in Scarlet manually. ` +
-    `Unofficial build — verify the bundle ID and source before installing.</div>` + guideHtml;
+    `<div class="dim" style="margin-top:8px">${tr('dl_note')}</div>` + guideHtml;
 }
 
 /* pushHash=false when opened from a deep link, so we don't rewrite the
-   #app= hash we just read. */
+   #app= hash we just read. modalCtx lets the language toggle re-render
+   an open modal in the new language. */
+let modalCtx = null;
 function openModal(name, sector, pushHash = true) {
   const apps = DB.cats[sector] || [];
   const a = apps.find(x => x.name === name);
   if (!a) return;
+  modalCtx = { name, sector };
   const row = (k, v) =>
     `<div class="r"><span class="k">${k}</span><span class="v">${v}</span></div>`;
   const bundles = a.bundle.map(b =>
     `<div class="bid"><code>${esc(b)}</code>` +
-    `<button class="cpy" data-c="${esc(b)}">COPY</button></div>`).join('');
+    `<button class="cpy" data-c="${esc(b)}">${tr('copy')}</button></div>`).join('');
+  const discussUrl = 'https://codeberg.org/crtGhoul/app-horde/issues/new?title=' +
+    encodeURIComponent('discuss: ' + a.name);
   mbody.innerHTML = `
     <button class="mx" id="mx" aria-label="Close modal">✕</button>
     <h3 class="glitch" data-t="${esc(a.name)}">${esc(a.name)}</h3>
-    <button id="mfav" class="mfav" data-name="${esc(a.name)}" aria-pressed="${favs.has(a.name) ? 'true' : 'false'}">☆ SAVE</button>
-    <div class="msec">${esc(sector)} CATEGORY</div>
-    ${row('SOURCES', srcRows(a))}
-    ${row('DOWNLOAD', dlRow(a))}
-    ${reqIos(a) ? row('REQUIRES', reqIosRow(a)) : ''}
-    ${row('APP STORE', storeRow(a))}
-    ${shotsRow(a) ? row('SCREENSHOTS', shotsRow(a)) : ''}
-    ${row('VERIFICATION', verifyRow(a))}
-    ${row('VIRUSTOTAL', vtRow(a))}
-    ${row('UPDATED', updatedRow(a))}
-    ${a.sz ? row('SIZE', fmtSize(a.sz)) : ''}
-    ${row('BUILDS INDEXED', a.n + ' build' + (a.n === 1 ? '' : 's'))}
-    ${a.tweak ? row('TWEAKS', esc(a.tweak)) : ''}
-    ${row('BUNDLE IDS', bundles || '—')}
-    ${row('UPLOADERS', esc(a.dev || 'Unknown'))}
-    ${row('VARIANTS', esc(a.variants.slice(0, 8).join(' · ') || '—'))}
-    <p class="warn">⚠ Unofficial builds. Verify hashes, use a throwaway Apple ID,
-    and never sideload banking or 2FA apps from here.</p>`;
+    <button id="mfav" class="mfav" data-name="${esc(a.name)}" aria-pressed="${favs.has(a.name) ? 'true' : 'false'}">${tr('save')}</button>
+    <div class="msec">${esc(sector)} ${tr('category_suffix')}</div>
+    ${row(tr('m_sources'), srcRows(a))}
+    ${row(tr('m_download'), dlRow(a))}
+    ${reqIos(a) ? row(tr('m_requires'), reqIosRow(a)) : ''}
+    ${row(tr('m_appstore'), storeRow(a))}
+    ${shotsRow(a) ? row(tr('m_screenshots'), shotsRow(a)) : ''}
+    ${row(tr('m_verification'), verifyRow(a))}
+    ${row(tr('m_virustotal'), vtPill(a) + ' ' + vtRow(a))}
+    ${row(tr('m_updated'), updatedRow(a))}
+    ${a.sz ? row(tr('m_size'), fmtSize(a.sz)) : ''}
+    ${row(tr('m_builds'), a.n + ' ' + tr(a.n === 1 ? 'build_s' : 'build_p'))}
+    ${a.tweak ? row(tr('m_tweaks'), esc(a.tweak)) : ''}
+    ${row(tr('m_bundles'), bundles || '—')}
+    ${row(tr('m_uploaders'), esc(a.dev || tr('unknown_uploader')))}
+    ${row(tr('m_variants'), esc(a.variants.slice(0, 8).join(' · ') || '—'))}
+    <p class="warn">${tr('warn_text')}</p>
+    <p style="margin-top:10px"><a href="${discussUrl}" target="_blank" rel="noopener" style="color:var(--toxic)">${tr('discuss')}</a></p>`;
   mbody.querySelectorAll('.cpy').forEach(btn =>
     btn.onclick = () => {
       navigator.clipboard.writeText(btn.dataset.c);
-      btn.textContent = 'COPIED'; setTimeout(() => btn.textContent = 'COPY', 1200);
+      btn.textContent = tr('copied'); setTimeout(() => btn.textContent = tr('copy'), 1200);
     });
   document.getElementById('mx').onclick = closeModal;
   document.getElementById('mfav').onclick = () => toggleFav(a.name);
@@ -725,28 +1169,77 @@ function openModal(name, sector, pushHash = true) {
       const src = btn.dataset.vsrc;
       const sel = mbody.querySelector(`select[data-vsrc="${src}"]`);
       const v = a.vh[src][+sel.value];
-      if (v && v[2]) window.location.href = installerLink(btn.dataset.inst, v[2]);
+      if (v && v[2]) tryInstall(btn.dataset.inst, v[2],
+        () => openModal(a.name, sector, false));
     };
   });
+  /* Prompt 20: mirrors — the same version carried by another source.
+     Clicking a chip jumps to that source's picker with the matching
+     build selected (the fix when one source's link is dead). */
+  const updMirror = src => {
+    const box = mbody.querySelector('.vmirror[data-vsrc="' + src + '"]');
+    const sel = mbody.querySelector('select[data-vsrc="' + src + '"]');
+    if (!box || !sel) return;
+    const v = (a.vh[src] || [])[+sel.value];
+    if (!v || !v[0]) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    const mirrors = [];
+    Object.keys(a.vh || {}).forEach(s2 => {
+      if (s2 === src) return;
+      const idx = (a.vh[s2] || []).findIndex(x => x[0] === v[0]);
+      if (idx >= 0) mirrors.push([s2, idx]);
+    });
+    if (!mirrors.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = '';
+    box.innerHTML = '<span class="dim">' + tr('mirror') + '</span> ' +
+      mirrors.map(([s2, idx]) =>
+        `<button class="gbtn sm vmirrorbtn" data-msrc="${s2}" data-midx="${idx}">` +
+        `${esc(((DB.srcmeta || {})[s2] || {}).label || s2.toUpperCase())} v${esc(v[0])}</button>`
+      ).join(' ');
+    box.querySelectorAll('.vmirrorbtn').forEach(b => {
+      b.onclick = () => {
+        const sel2 = mbody.querySelector(
+          'select[data-vsrc="' + b.dataset.msrc + '"]');
+        if (!sel2) return;
+        sel2.value = b.dataset.midx;
+        sel2.dispatchEvent(new Event('change'));
+        const row = sel2.closest('.vsrc');
+        if (row) {
+          row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          row.classList.add('flash');
+          setTimeout(() => row.classList.remove('flash'), 1200);
+        }
+      };
+    });
+  };
   /* changelog line under each version picker: vh entries are
-     [version, date, url, changelog?] — the 4th element is optional */
+     [version, date, url, changelog?] — the 4th element is optional.
+     A known-dead selected build (WP2) replaces the changelog with a
+     blood-red LINK DEAD note. */
   const updVlog = sel => {
     const src = sel.dataset.vsrc;
     const box = mbody.querySelector('.vlog[data-vsrc="' + src + '"]');
     const v = (a.vh[src] || [])[+sel.value];
-    const cl = (v && v[3]) || '';
-    if (box) {
-      if (cl) {
-        box.style.display = '';
-        box.textContent = cl.length > 160 ? cl.slice(0, 160) + '\u2026' : cl;
-      } else box.style.display = 'none';
+    if (!box) return;
+    if (v && a.dead && a.dead.includes(v[2])) {
+      box.style.display = '';
+      box.style.color = 'var(--blood)';
+      box.textContent = '☠ ' + tr('link_dead') + ' — ' + tr('dead_note');
+      updMirror(src);
+      return;
     }
+    box.style.color = '';
+    const cl = (v && v[3]) || '';
+    if (cl) {
+      box.style.display = '';
+      box.textContent = cl.length > 160 ? cl.slice(0, 160) + '\u2026' : cl;
+    } else box.style.display = 'none';
+    updMirror(sel.dataset.vsrc);
   };
   mbody.querySelectorAll('select[data-vsrc]').forEach(sel => {
     sel.addEventListener('change', () => updVlog(sel));
     updVlog(sel);
   });
-  /* dead-link reporter: pre-filled GitHub issue per app/source/version */
+  /* dead-link reporter: pre-filled Codeberg issue per app/source/version */
   mbody.querySelectorAll('.vdead').forEach(btn => {
     btn.onclick = () => {
       const src = btn.dataset.vsrc;
@@ -756,7 +1249,7 @@ function openModal(name, sector, pushHash = true) {
       const body = 'app: ' + a.name + '\nsource: ' + src + '\nversion: ' +
         ((v && v[0]) || '') + '\nurl: ' + ((v && v[2]) || '') +
         '\n(reported from app-horde)';
-      window.open('https://github.com/crtGhoul/app-horde/issues/new?title=' +
+      window.open('https://codeberg.org/crtGhoul/app-horde/issues/new?title=' +
         encodeURIComponent(title) + '&body=' + encodeURIComponent(body), '_blank');
     };
   });
@@ -772,6 +1265,7 @@ function openModal(name, sector, pushHash = true) {
 }
 function closeModal() {
   modal.classList.remove('open');
+  modalCtx = null;
   document.body.style.overflow = '';
   try { history.replaceState(null, '', location.pathname + location.search); }
   catch (e) { /* non-fatal */ }
@@ -783,7 +1277,12 @@ let appIndex = new Map();
 function buildAppIndex() {
   appIndex = new Map();
   Object.entries(DB.cats).forEach(([sector, apps]) =>
-    apps.forEach(a => { if (!appIndex.has(a.name)) appIndex.set(a.name, { app: a, sector }); }));
+    apps.forEach(a => {
+      // WP4: normalized name tokens for fuzzy search, computed once
+      if (!a._ntoks)
+        a._ntoks = a.name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+      if (!appIndex.has(a.name)) appIndex.set(a.name, { app: a, sector });
+    }));
 }
 function routeHash() {
   const m = location.hash.match(/^#app=(.+)/);
@@ -800,8 +1299,10 @@ function paintRepoHeader(n) {
   secSub.style.display = '';
   sectTitle.innerHTML = '<span class="glitch" data-t="REPO">REPO</span> ' +
     '<span style="color:var(--blood)">' + esc(label) + '</span>';
-  secSub.innerHTML = '// ' + n.toLocaleString() + ' apps from this repo · ' +
-    '<a href="#" id="clearrepo" style="color:var(--toxic)">clear \u00d7</a>';
+  secSub.innerHTML = (srcFilter === 'all'
+    ? tr('apps_listed').replace('{n}', n.toLocaleString())
+    : tr('apps_from_repo').replace('{n}', n.toLocaleString())) +
+    '<a href="#" id="clearrepo" style="color:var(--toxic)">' + tr('clear_x') + '</a>';
   const cr = document.getElementById('clearrepo');
   if (cr) cr.onclick = e => { e.preventDefault(); setRepoFilter('all'); };
 }
@@ -852,7 +1353,7 @@ function openRepoMenu() {
     const star = m.official ? ' ★' : '';
     return `<button class="rrow" data-repo="${esc(k)}">` +
       `<span class="src ${esc(m.cls || 's-apt')}">${esc(m.label || k.toUpperCase())}</span>` +
-      `<span class="rdim">${n.toLocaleString()} apps · ${e.toLocaleString()} builds${star}</span>` +
+      `<span class="rdim">${n.toLocaleString()} apps \u00b7 ${e.toLocaleString()} ${tr('build_p')}${star}</span>` +
       `<span class="rgo">→</span></button>`;
   }).join('');
   repoMenu.classList.add('open');
@@ -879,9 +1380,9 @@ function renderSafeSources() {
   el.innerHTML = rows.map(r =>
     `<div class="fix"><b>${r.official ? '\u2605' : '\u25cf'} ${esc(r.label)}</b>` +
     `<span>${r.official
-      ? 'Official developer source \u2014 the safest tier, run by the app makers themselves.'
-      : 'Large community repo \u2014 widely used, but community-run. Check the app intel before installing.'}` +
-    ` ${r.entries.toLocaleString()} apps indexed.</span></div>`).join('');
+      ? tr('safe_official')
+      : tr('safe_community')}` +
+    ` ${tr('apps_indexed').replace('{n}', r.entries.toLocaleString())}</span></div>`).join('');
 }
 
 /* ---------- 12b. Universal IPA installer page ----------
@@ -893,31 +1394,30 @@ function buildInstaller() {
   if (!inp || !out) return;
   const url = (inp.value || '').trim();
   if (!/^https?:\/\//i.test(url)) {
-    out.innerHTML = '<p class="warn">that doesn\u2019t look like an http(s) url ' +
-      '\u2014 paste the full link to the .ipa file.</p>';
+    out.innerHTML = '<p class="warn">' + tr('inst_badurl') + '</p>';
     return;
   }
   const warnIpa = !/\.ipa(\?|#|$)/i.test(url);
   const rows = INSTS.map(([k, label]) => {
     const link = installerLink(k, url);
     return `<div class="dlrow"><div><b>${label}</b>` +
-      `<span>tap to open in ${label} \u2014 or copy the link</span></div>` +
+      `<span>${tr('inst_taplink').replace('{label}', label)}</span></div>` +
       `<div style="display:flex;gap:6px;flex:none">` +
-      `<button class="gbtn sm iopen" data-l="${esc(link)}">OPEN \u2197</button>` +
-      `<button class="gbtn sm icopy" data-c="${esc(link)}">COPY</button>` +
+      `<button class="gbtn sm iopen" data-inst="${k}" data-url="${esc(url)}">${tr('inst_open')}</button>` +
+      `<button class="gbtn sm icopy" data-c="${esc(link)}">${tr('copy')}</button>` +
       `</div></div>`;
   }).join('');
   out.innerHTML = (warnIpa
-      ? '<p class="dim" style="margin:0 0 10px">\u26a0 url doesn\u2019t end in .ipa \u2014 trying anyway.</p>'
+      ? '<p class="dim" style="margin:0 0 10px">' + tr('inst_notipa') + '</p>'
       : '') + `<div class="dllist">${rows}</div>`;
   out.querySelectorAll('.iopen').forEach(b =>
-    b.onclick = () => { window.location.href = b.dataset.l; });
+    b.onclick = () => tryInstall(b.dataset.inst, b.dataset.url, null));
   out.querySelectorAll('.icopy').forEach(b =>
     b.onclick = () => {
       if (navigator.clipboard && navigator.clipboard.writeText)
         navigator.clipboard.writeText(b.dataset.c);
-      b.textContent = 'COPIED';
-      setTimeout(() => b.textContent = 'COPY', 1200);
+      b.textContent = tr('copied');
+      setTimeout(() => b.textContent = tr('copy'), 1200);
     });
 }
 const instBuildBtn = document.getElementById('instbuild');
@@ -927,8 +1427,58 @@ if (ipaUrlInput) ipaUrlInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') buildInstaller();
 });
 
-/* ---------- 12c. Editors' choice rail ---------- */
-function paintCurated() {
+/* ---------- 12c. Prompt 21: "what changed" view ----------
+   Renders DB.changes (data/changes.json, written by build.py's
+   per-source diff vs the previous build) as repo rows. Clicking an
+   app name opens its intel modal. */
+function renderChanges() {
+  const meta = document.getElementById('changesmeta');
+  const list = document.getElementById('changeslist');
+  if (!meta || !list) return;
+  const payload = DB && DB.changes;
+  const entries = (payload && payload.changes) || [];
+  if (!entries.length) {
+    meta.textContent = '';
+    list.innerHTML = '<p class="dim">' + tr('changes_none') + '</p>';
+    return;
+  }
+  meta.textContent = tr('changes_meta')
+    .replace('{d}', payload.generated || '')
+    .replace('{n}', entries.length);
+  list.innerHTML = entries.map(e => {
+    const adds = (e.added || []).map(x =>
+      '<span class="add">+ v' + esc(x.v) +
+      (x.d ? ' · ' + esc(x.d) : '') + '</span>').join('<br>');
+    const dels = (e.removed || []).map(v =>
+      '<span class="del">− v' + esc(v) + '</span>').join('<br>');
+    return '<div class="chgrow"><div>' + srcBadge(e.source) +
+      ' <span class="nm" data-name="' + esc(e.name) + '" data-sector="' +
+      esc(e.sector) + '">' + esc(e.name) + '</span>' +
+      (e.new ? ' <span class="newtag">' + tr('changes_new') + '</span>' : '') +
+      ' <span class="dim">' + esc(e.sector) + '</span></div>' +
+      '<div class="delta">' + [adds, dels].filter(Boolean).join('<br>') +
+      '</div></div>';
+  }).join('');
+  list.querySelectorAll('.nm').forEach(el =>
+    el.onclick = () => openModal(el.dataset.name, el.dataset.sector));
+}
+
+/* WP5: latest installer-tool versions, baked into DB.tools by build.py
+   from each project's GitHub releases; rendered into the guide. */
+function renderTools() {
+  const el = document.getElementById('toolwatch');
+  if (!el) return;
+  const tools = (DB && DB.tools) || [];
+  if (!tools.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<b style="color:var(--toxic)">' + esc(tr('toolwatch')) + '</b><br>' +
+    tools.map(x =>
+      esc(x.name) + ' — <a href="' + esc(x.url) + '" target="_blank" rel="noopener" ' +
+      'style="color:var(--toxic)">' + esc(x.version) + '</a>' +
+      (x.date ? ' <span class="dim">(' + esc(x.date) + ')</span>' : '')
+    ).join('<br>');
+}
+
+/* ---------- 12c. Editors' choice rail ---------- */function paintCurated() {
   const rail = document.getElementById('currail');
   if (!rail) return;
   rail.innerHTML = (DB.curated || []).map(c => {
@@ -991,7 +1541,43 @@ document.getElementById('srcf').addEventListener('change', e =>
 /* Home panels: "most builds" + "top rated" grids. Shared by init and the
    "my iOS" repaint — cards carry NEEDS-iOS flags, so they must be rebuilt
    when the user's version changes. */
+/* Latest-updates strip (2026-11-01): the newest entries from data/changes.json
+   surfaced on home so the weekly news is visible without opening [changes]. */
+function paintLatest() {
+  const list = document.getElementById('latestlist');
+  const sub = document.getElementById('latestsub');
+  if (!list || !sub) return;
+  const payload = DB && DB.changes;
+  const entries = (payload && payload.changes) || [];
+  if (!entries.length) {
+    sub.textContent = tr('latest_empty');
+    list.innerHTML = '';
+    return;
+  }
+  sub.textContent = tr('latest_sub')
+    .replace('{d}', payload.generated || '')
+    .replace('{n}', entries.length);
+  const rows = entries.slice(0, 6).map(e => {
+    const first = (e.added && e.added[0])
+      ? '+ v' + esc(e.added[0].v) + (e.added[0].d ? ' · ' + esc(e.added[0].d) : '')
+      : ((e.removed && e.removed[0]) ? '− v' + esc(e.removed[0]) : '');
+    return '<div class="chgrow lrow" data-name="' + esc(e.name) +
+      '" data-sector="' + esc(e.sector) + '"><div>' + srcBadge(e.source) +
+      ' <span class="nm">' + esc(e.name) + '</span>' +
+      (e.new ? ' <span class="newtag">' + tr('changes_new') + '</span>' : '') +
+      ' <span class="dim">' + esc(e.sector) + '</span></div>' +
+      '<div class="delta">' + first + '</div></div>';
+  }).join('');
+  list.innerHTML = rows +
+    '<p style="margin:8px 0 0"><button class="cta" id="latestall">' +
+    tr('latest_all').replace('{n}', entries.length) + '</button></p>';
+  const btn = document.getElementById('latestall');
+  if (btn) btn.onclick = () => setTab('changes');
+  list.querySelectorAll('.lrow').forEach(r =>
+    r.addEventListener('click', () => openModal(r.dataset.name, r.dataset.sector)));
+}
 function paintHomeGrids() {
+  paintLatest();
   const tg = document.getElementById('topgrid');
   if (tg && DB.top) {
     tg.innerHTML = DB.top.map(cardHTML).join('');
@@ -1029,9 +1615,27 @@ document.querySelectorAll('.tab').forEach(b =>
 document.getElementById('navrepobtn').onclick = () => openRepoMenu();
 // [search] tab: jump to the toolbar and focus the search field
 document.getElementById('searchtab').onclick = () => {
-  if (tab === 'guide' || tab === 'installer') setTab('home');
+  if (tab === 'guide' || tab === 'installer' || tab === 'changes') setTab('home');
   document.getElementById('toolbar').scrollIntoView({ behavior: 'smooth', block: 'start' });
   setTimeout(() => document.getElementById('q').focus({ preventScroll: true }), 450);
+};
+// [ES]/[EN] toggle: flip the UI language, persist, re-render dynamic parts
+document.getElementById('langtoggle').onclick = () => {
+  LANG = LANG === 'en' ? 'es' : 'en';
+  try { localStorage.setItem('horde_lang', LANG); } catch (e) { /* non-fatal */ }
+  applyLangStatic();
+  paintHomeGrids();
+  paintFresh();
+  paintCurated();
+  renderSafeSources();
+  renderTools();
+  paintFavRadar();
+  if (tab === 'repo') { paintRepoHeader(filtered().length); render(); }
+  else if (tab !== 'home' && tab !== 'guide' && tab !== 'installer') setTab(tab, true);
+  if (modalCtx && modal.classList.contains('open')) {
+    const mc = modalCtx;
+    openModal(mc.name, mc.sector, false);
+  }
 };
 document.querySelectorAll('.tile').forEach(t =>
   t.onclick = () => setTab(t.dataset.t));
@@ -1059,8 +1663,8 @@ document.addEventListener('keydown', e => {
 function copyBtn(btn) {
   btn.onclick = () => {
     const done = () => {
-      btn.textContent = 'COPIED';
-      setTimeout(() => btn.textContent = 'COPY', 1200);
+      btn.textContent = tr('copied');
+      setTimeout(() => btn.textContent = tr('copy'), 1200);
     };
     if (navigator.clipboard && navigator.clipboard.writeText)
       navigator.clipboard.writeText(btn.dataset.c).then(done).catch(done);
@@ -1070,9 +1674,11 @@ function copyBtn(btn) {
 /* startApp() runs after db.json.gz loads (see template head). */
 function startApp() {
   buildAppIndex();
+  applyLangStatic();
   paintHomeGrids();
   paintFresh();
   paintCurated();
+  renderTools();
   paintFavRadar();
   // source filter options are baked into the HTML by build.py
   buildBootLines();
@@ -1088,6 +1694,23 @@ function startApp() {
   startRain();
   startRefreshCountdown();
 }
+
+/* ---------- Boot: fetch the split dataset, then init ----------
+   The #boot overlay (static HTML) stays up while data loads; the
+   familiar terminal boot animation plays once DB is in memory. */
+(function bootDB() {
+  const log = document.getElementById('bootlog');
+  if (log) log.innerHTML = '&gt; fetching horde index …<br>';
+  loadDB().then(db => {
+    DB = db;
+    startApp();
+  }).catch(err => {
+    console.error('app-horde: dataset load failed', err);
+    if (log) log.innerHTML = '&gt; <span style="color:#ff6b6b">FAILED to load the app index.</span><br>&gt; check your connection and reload.<br>&gt; <small>' + String(err).replace(/</g, '&lt;') + '</small>';
+    const skip = document.getElementById('bootskip');
+    if (skip) { skip.textContent = '[ RELOAD ]'; skip.onclick = () => location.reload(); }
+  });
+})();
 
 </script>
 </body>

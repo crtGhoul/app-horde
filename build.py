@@ -232,7 +232,13 @@ VARIANTS_CAP = 40
 # ---------------------------------------------------------------- fetch ----
 def fetch_json(url, timeout=60, retries=3):
     """GET a URL and parse the JSON body, with exponential-backoff retries
-    on transient failures. Raises the last exception when all retries fail."""
+    on transient failures. Raises the last exception when all retries fail.
+
+    Prompt 19 follow-up (2026-10-30): urllib dies with IncompleteRead on
+    large feeds through the egress proxy (alans' ~17MB repo.json fails
+    deterministically this way — same failure class ipaomtk hit in
+    2026-10-13). When urllib exhausts its retries, fall back to curl,
+    which completes these downloads reliably."""
     req = urllib.request.Request(url, headers={"User-Agent": "APP_HORDE-build/1.0"})
     last = None
     for attempt in range(retries):
@@ -243,6 +249,12 @@ def fetch_json(url, timeout=60, retries=3):
             last = e
             if attempt < retries - 1:
                 time.sleep(2 ** attempt)  # 1s, 2s — ride out transient hiccups (2026-10-05: all 13 sources timed out twice in one morning)
+    try:
+        raw = _ipaomtk_get_curl(url, timeout=max(timeout, 120))
+        return json.loads(raw.decode("utf-8", "replace"))
+    except Exception as e:
+        print(f"  ! fetch_json curl fallback also failed for {url[:70]}: {e}",
+              flush=True)
     raise last
 
 
@@ -396,39 +408,133 @@ def fetch_ipaomtk(snap_path):
     return out
 
 
+QUARANTINE_PATH = os.path.join(HERE, "quarantine.json")
+
+
+def validate_feed(data):
+    """Strict schema gate for AltStore/SideStore-style JSON feeds
+    (Prompt 19). Returns (ok, reason). A feed passes when the top level
+    is an object with an 'apps' list, at least half the entries are
+    objects, and at least one entry carries a name. Disparate source
+    schemas (extra/missing optional fields) are fine — this gates
+    structure, not taste."""
+    if not isinstance(data, dict):
+        return False, "top level is not a JSON object"
+    apps = data.get("apps")
+    if not isinstance(apps, list):
+        return False, "no 'apps' list in feed"
+    if not apps:
+        return False, "'apps' list is empty"
+    dicts = [a for a in apps if isinstance(a, dict)]
+    if len(dicts) * 2 < len(apps):
+        return False, f"only {len(dicts)}/{len(apps)} entries are objects"
+    if not any(str(a.get("name") or "").strip() for a in dicts):
+        return False, "no entry has a name"
+    return True, ""
+
+
+def load_quarantine():
+    """quarantine.json {source_key: {reason, ts, url}}. {} when absent."""
+    try:
+        with open(QUARANTINE_PATH, encoding="utf-8") as fh:
+            q = json.load(fh)
+        return q if isinstance(q, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_quarantine(q):
+    try:
+        with open(QUARANTINE_PATH, "w", encoding="utf-8") as fh:
+            json.dump(q, fh, indent=1, sort_keys=True)
+    except Exception as e:
+        print(f"  ! quarantine write failed: {e}", flush=True)
+
+
 def load_sources(offline):
     """Fetch every configured source (or reuse snapshots in --offline mode).
 
-    Returns {key: (meta, [app dicts])}; a source that fails to fetch/parse
-    is skipped with a warning so one dead repo can't kill the build.
+    Returns {key: (meta, [app dicts])}. Prompt 19 hardening: a live feed
+    must pass validate_feed() BEFORE it is used or snapshotted — a feed
+    that changes schema overnight is quarantined (quarantine.json) and
+    the build falls back to the last-good snapshot instead of dropping
+    the source's apps or ingesting garbage. A source with no valid
+    snapshot is skipped with a warning so one dead repo can't kill the
+    build.
     """
     fetched = {}
+    quarantine = load_quarantine()
+    q_dirty = False
     for key, meta in SOURCES.items():
         snap = os.path.join(SOURCES_DIR, key + ".json")
-        try:
-            if key == "ipaomtk":
-                # WordPress crawl, not a JSON feed (see fetch_ipaomtk)
+        data = None
+        if key == "ipaomtk":
+            # WordPress crawl, not a JSON feed (see fetch_ipaomtk); the
+            # crawl assembles its own records, so the feed-level schema
+            # gate doesn't apply — record checks happen in iter_builds.
+            try:
                 if offline and os.path.exists(snap):
                     with open(snap, encoding="utf-8") as fh:
                         data = json.load(fh)
                 else:
                     data = fetch_ipaomtk(snap)
-            elif offline and os.path.exists(snap):
+            except Exception as e:
+                print(f"  ! {key}: fetch failed ({e}) — skipped", flush=True)
+                continue
+        elif offline:
+            try:
                 with open(snap, encoding="utf-8") as fh:
                     data = json.load(fh)
-            else:
-                data = fetch_json(meta["url"])
+            except Exception as e:
+                print(f"  ! {key}: snapshot unreadable ({e}) — skipped",
+                      flush=True)
+                continue
+        else:
+            try:
+                raw = fetch_json(meta["url"])
+            except Exception as e:
+                print(f"  ! {key}: fetch failed ({e}) — skipped", flush=True)
+                continue
+            ok, reason = validate_feed(raw)
+            if ok:
+                data = raw
                 os.makedirs(SOURCES_DIR, exist_ok=True)
                 with open(snap, "w", encoding="utf-8") as fh:
                     json.dump(data, fh)
-            apps = data.get("apps") if isinstance(data, dict) else None
-            if not isinstance(apps, list):
-                print(f"  ! {key}: no parseable apps list — skipped", flush=True)
-                continue
-            fetched[key] = (meta, apps)
-            print(f"  + {key}: {len(apps)} entries", flush=True)
-        except Exception as e:
-            print(f"  ! {key}: fetch failed ({e}) — skipped", flush=True)
+                if key in quarantine:
+                    del quarantine[key]
+                    q_dirty = True
+                    print(f"  + {key}: feed healthy again — quarantine "
+                          f"cleared", flush=True)
+            else:
+                quarantine[key] = {"reason": reason,
+                                   "ts": date.today().isoformat(),
+                                   "url": meta["url"]}
+                q_dirty = True
+                print(f"  ! {key}: QUARANTINED ({reason})", flush=True)
+                try:
+                    with open(snap, encoding="utf-8") as fh:
+                        data = json.load(fh)
+                    ok2, reason2 = validate_feed(data)
+                    if not ok2:
+                        print(f"  ! {key}: last-good snapshot also invalid "
+                              f"({reason2}) — skipped", flush=True)
+                        continue
+                    print(f"  ! {key}: using last-good snapshot "
+                          f"({len(data.get('apps') or [])} entries)",
+                          flush=True)
+                except Exception:
+                    print(f"  ! {key}: no usable snapshot — skipped",
+                          flush=True)
+                    continue
+        apps = data.get("apps") if isinstance(data, dict) else None
+        if not isinstance(apps, list):
+            print(f"  ! {key}: no parseable apps list — skipped", flush=True)
+            continue
+        fetched[key] = (meta, apps)
+        print(f"  + {key}: {len(apps)} entries", flush=True)
+    if q_dirty or not os.path.exists(QUARANTINE_PATH):
+        save_quarantine(quarantine)
     return fetched
 
 
@@ -481,6 +587,40 @@ def parse_size(a, v):
     return 0
 
 
+# Prompt 19: download-URL discipline. Plain-HTTP and known
+# shortener/monetizer hosts are never cataloged; redirect chains that
+# don't land on a direct file are caught by the link-health probe (see
+# exclude_redirect_chains). Drops are counted per source + reason in
+# INGEST_STATS and printed by main().
+SHORTENER_HOSTS = {
+    "bit.ly", "tinyurl.com", "t.co", "goo.gl", "rb.gy", "cutt.ly",
+    "is.gd", "adf.ly", "ouo.io", "linkvertise.com", "shorturl.at",
+    "rebrand.ly", "bl.ink", "s.id", "v.gd", "x.co", "fold.am",
+}
+INGEST_STATS = {"dropped": {}}
+
+
+def url_block_reason(url):
+    """Why a download URL must not be cataloged, or None when clean.
+    An empty URL is not blocked here — records without a download URL
+    are the assembler's business, as before."""
+    if not url:
+        return None
+    low = url.lower()
+    if low.startswith("http://"):
+        return "plain-http"
+    if not low.startswith("https://"):
+        return "non-https-scheme"
+    try:
+        host = urllib.parse.urlparse(url).netloc.lower()
+    except Exception:
+        return "unparseable-url"
+    host = host.split("@")[-1].split(":")[0]
+    if host in SHORTENER_HOSTS:
+        return "shortener-host"
+    return None
+
+
 def iter_builds(key, meta, apps):
     """Yield flat build records from one source's app list."""
     for a in apps:
@@ -514,6 +654,11 @@ def iter_builds(key, meta, apps):
             if not isinstance(v, dict):
                 continue
             url = str(v.get("downloadURL") or a.get("downloadURL") or "").strip()
+            reason = url_block_reason(url)
+            if reason:
+                d = INGEST_STATS["dropped"].setdefault(key, {})
+                d[reason] = d.get(reason, 0) + 1
+                continue
             vbundle = str(v.get("bundleIdentifier") or "").strip() or bundle
             text = clean_text(v.get("localizedDescription"), v.get("versionDescription"))
             if not text:
@@ -694,6 +839,92 @@ def itunes_lookup(bundles):
     return out
 
 
+# ------------------------------------------------------- tools watch -----
+TOOLS_WATCH = [
+    ("SideStore", "SideStore/SideStore"),
+    ("LiveContainer", "LiveContainer/LiveContainer"),
+    ("AltStore", "altstoreio/AltStore"),
+]
+TOOLS_TTL = 6 * 3600  # seconds between GitHub release re-checks
+
+
+def load_tools_watch(offline=False):
+    """Latest GitHub releases for the installer tools the guide recommends.
+
+    Cache: tools_watch.json {repo: {name, version, date, url, ts}} with a
+    6h TTL so repeat builds don't hammer the public API. Fails open: any
+    fetch error keeps whatever the cache had (possibly nothing), and the
+    build never dies on this. Returns [{name, version, date, url}] in
+    TOOLS_WATCH order, entries with no known version omitted.
+    """
+    p = os.path.join(HERE, "tools_watch.json")
+    cache = {}
+    try:
+        with open(p, encoding="utf-8") as fh:
+            d = json.load(fh)
+        if isinstance(d, dict):
+            cache = d
+    except Exception:
+        cache = {}
+    now = time.time()
+    changed = False
+    for name, repo in TOOLS_WATCH:
+        ent = cache.get(repo)
+        if ent and now - (ent.get("ts") or 0) < TOOLS_TTL:
+            continue
+        if offline:
+            continue
+        try:
+            d = fetch_json(
+                f"https://api.github.com/repos/{repo}/releases/latest",
+                timeout=30, retries=2)
+            cache[repo] = {"name": name,
+                           "version": str(d.get("tag_name") or ""),
+                           "date": str(d.get("published_at") or "")[:10],
+                           "url": str(d.get("html_url") or ""),
+                           "ts": now}
+            changed = True
+        except Exception as e:
+            print(f"  ! tools watch {repo}: {e} — keeping cache", flush=True)
+    if changed:
+        try:
+            with open(p, "w", encoding="utf-8") as fh:
+                json.dump(cache, fh, ensure_ascii=True, sort_keys=True)
+        except Exception as e:
+            print(f"  ! tools_watch write failed: {e}", flush=True)
+    out = []
+    for name, repo in TOOLS_WATCH:
+        ent = cache.get(repo)
+        if ent and ent.get("version"):
+            out.append({"name": name, "version": ent["version"],
+                        "date": ent.get("date", ""),
+                        "url": ent.get("url", "")})
+    return out
+
+
+# ------------------------------------------------------ screenshots ------
+def load_screenshots_cache():
+    """Screenshot URL cache {bundle_id: [urls]} for WP6, built
+    incrementally by build_db. {} when absent/corrupt."""
+    p = os.path.join(HERE, "screenshots.json")
+    try:
+        with open(p, encoding="utf-8") as fh:
+            d = json.load(fh)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_screenshots_cache(cache):
+    """Persist the screenshots cache (sorted keys, stable bytes)."""
+    try:
+        with open(os.path.join(HERE, "screenshots.json"), "w",
+                  encoding="utf-8") as fh:
+            json.dump(cache, fh, ensure_ascii=True, sort_keys=True)
+    except Exception as e:
+        print(f"  ! screenshots write failed: {e}", flush=True)
+
+
 # ------------------------------------------------------------ assemble ----
 def valid_bundle(b):
     """True for a plausible real bundle id (dotted, 2+ labels, not a
@@ -741,7 +972,7 @@ def has_it(it):
     return bool(it and it.get("name"))
 
 
-def build_db(fetched, seed, old_db):
+def build_db(fetched, seed, old_db, tools=None):
     """Assemble the site DB from fetched sources.
 
     fetched: {source_key: (meta, [app dicts])} from load_sources().
@@ -749,6 +980,8 @@ def build_db(fetched, seed, old_db):
              previous index.html so only NEW bundle ids hit Apple's API.
     old_db:  the previous DB (only used to keep the Monday-refresh schedule
              block stable across rebuilds).
+    tools:   [{name, version, date, url}] from load_tools_watch(), baked
+             in as db["tools"] for the guide's LATEST TOOL VERSIONS block.
 
     Returns (db, verified_count). `db` is JSON-serializable; render()
     splits it into data/meta.json + data/cats/*.json next to index.html.
@@ -766,6 +999,9 @@ def build_db(fetched, seed, old_db):
 
     vt_cache = load_vt_cache()
     print(f"  vt cache: {len(vt_cache):,} urls", flush=True)
+
+    shots_cache = load_screenshots_cache()
+    pending_shots = []  # (app record, bundle id) awaiting a capped lookup
 
     # which bundles need fresh App Store lookups? (seed is name-keyed)
     need = set()
@@ -832,6 +1068,19 @@ def build_db(fetched, seed, old_db):
                 if f and f.get("d"):
                     it["d"] = f["d"]
                     break
+
+        # WP6 screenshots: screenshots.json cache first, then the App
+        # Store record's own ss list; verified apps with neither queue
+        # their best bundle for the capped post-loop lookup.
+        shots = []
+        if it:
+            for b in bundles:
+                c = shots_cache.get(b)
+                if c:
+                    shots = list(c)[:3]
+                    break
+            if not shots and it.get("ss"):
+                shots = list(it["ss"])[:3]
 
         genre = (it or {}).get("g", "")
         low = (name + " " + " ".join(texts[:3])).lower()
@@ -911,7 +1160,29 @@ def build_db(fetched, seed, old_db):
         vt = vt_verdict(vt_cache, rec)
         if vt:
             rec["vt"] = vt
+        if shots:
+            rec["shots"] = shots
+        elif it and not any(b in shots_cache for b in bundles):
+            cand = next((b for b in bundles if valid_bundle(b)), "")
+            if cand:
+                pending_shots.append((rec, cand))
         apps.append(rec)
+
+    # WP6: capped incremental screenshot lookups (300/build), fail open.
+    if pending_shots:
+        want = pending_shots[:300]
+        print(f"  screenshots: {len(want)} new lookups (cap 300)", flush=True)
+        try:
+            got = itunes_lookup([b for _, b in want])
+        except Exception as e:
+            print(f"  ! screenshots lookup failed: {e}", flush=True)
+            got = {}
+        for rec, b in want:
+            ss = list((got.get(b) or {}).get("ss") or [])[:3]
+            shots_cache[b] = ss
+            if ss:
+                rec["shots"] = ss
+        save_screenshots_cache(shots_cache)
 
     # editors' choice rail: resolve curated.json names against the index
     curated_entries = []
@@ -957,6 +1228,7 @@ def build_db(fetched, seed, old_db):
         "nsources": len(fetched),
         "repos": repos,
         "curated": curated,
+        "tools": tools or [],
         "srcmeta": {k: {"label": SOURCES[k]["short"].upper(),
                         "cls": SOURCES[k]["cls"],
                         "official": SOURCES[k]["official"]}
@@ -1140,7 +1412,169 @@ def render(db, verified, out_path):
 
 
 # ---------------------------------------------------------------- main -----
-def check_link_health(db, cap=400, cache_path=None):
+def load_link_health_cache(cache_path=None):
+    """Read link_health.json ({url: {"ok": bool, "ts": date}}). {} when
+    absent/corrupt — the probe simply re-checks everything."""
+    cache_path = cache_path or os.path.join(HERE, "link_health.json")
+    try:
+        with open(cache_path, encoding="utf-8") as fh:
+            cache = json.load(fh)
+        return cache if isinstance(cache, dict) else {}
+    except Exception:
+        return {}
+
+
+def bake_dead_links(db, cache):
+    """Bake known-dead download URLs into app records as rec["dead"]
+    (sorted URL list, only URLs actually present in the app's vh), from
+    the link-health cache. The UI badges dead builds in the version
+    picker/modal and flags cards whose every build is dead. Returns the
+    number of (app, url) dead flags baked."""
+    dead_urls = {u for u, e in cache.items()
+                 if isinstance(e, dict) and e.get("ok") is False}
+    if not dead_urls:
+        return 0
+    n = 0
+    for apps in db["cats"].values():
+        for a in apps:
+            mine = set()
+            for lst in (a.get("vh") or {}).values():
+                for entry in lst:
+                    if len(entry) > 2 and entry[2] in dead_urls:
+                        mine.add(entry[2])
+            if mine:
+                a["dead"] = sorted(mine)
+                n += len(mine)
+    return n
+
+
+def exclude_redirect_chains(db, cache):
+    """Remove builds whose download URL is a known redirect chain that
+    doesn't land on a direct .ipa/.tipa (Prompt 19: never cataloged —
+    excluded outright, unlike dead links which are badged). Apps left
+    with no builds drop out of the DB. Returns (builds_removed,
+    apps_removed)."""
+    chained = {u for u, e in cache.items()
+               if isinstance(e, dict) and e.get("reason") == "redirect-chain"}
+    if not chained:
+        return 0, 0
+    nb = na = 0
+    for sector in list(db["cats"]):
+        kept = []
+        for a in db["cats"][sector]:
+            vh = a.get("vh") or {}
+            gone = 0
+            for src in list(vh):
+                before = len(vh[src])
+                vh[src] = [e for e in vh[src]
+                           if not (len(e) > 2 and e[2] in chained)]
+                gone += before - len(vh[src])
+                if not vh[src]:
+                    del vh[src]
+            if gone:
+                nb += gone
+                a["n"] = sum(len(l) for l in vh.values())
+                a["src"] = [s for s in (a.get("src") or []) if s in vh]
+                if a.get("per"):
+                    a["per"] = {s: len(vh[s]) for s in vh if s in a["per"]}
+            if vh:
+                kept.append(a)
+            else:
+                na += 1
+        db["cats"][sector] = kept
+        if isinstance(db.get("counts"), dict):
+            db["counts"][sector] = len(kept)
+    if nb:
+        db["total"] = sum(a["n"] for apps in db["cats"].values()
+                          for a in apps)
+        db["unique"] = sum(len(apps) for apps in db["cats"].values())
+    return nb, na
+
+
+# Prompt 21: per-source version diffs -> data/changes.json, consumed by
+# the site's [changes] view. IPFS mirroring of the dataset stays an
+# experiment behind this flag — do NOT surface it in the UI until a
+# real pin survives a week (Cesar's rule).
+IPFS_MIRROR_ENABLED = False
+
+CHANGES_CAP = 300
+
+
+def compute_changes(db, old_db):
+    """Diff this build against the previous one, per app + source.
+
+    Returns [{name, sector, source, added: [{v, d}], removed: [v],
+    new: bool}] newest first, capped at CHANGES_CAP. Brand-new apps
+    appear once per source with their newest build as the addition."""
+    old_idx = {}
+    for apps in (old_db.get("cats") or {}).values():
+        for a in apps:
+            if a.get("name") and a["name"] not in old_idx:
+                old_idx[a["name"]] = a
+    entries = []
+    for sector, apps in db["cats"].items():
+        for a in apps:
+            old = old_idx.get(a["name"])
+            vh = a.get("vh") or {}
+            if old is None:
+                for src, lst in vh.items():
+                    if lst:
+                        entries.append(
+                            {"name": a["name"], "sector": sector,
+                             "source": src, "new": True,
+                             "added": [{"v": lst[0][0], "d": lst[0][1]}],
+                             "removed": []})
+                continue
+            ovh = old.get("vh") or {}
+            for src, lst in vh.items():
+                oldvers = {e[0] for e in ovh.get(src, [])}
+                newvers = {e[0] for e in lst}
+                added = [{"v": e[0], "d": e[1]} for e in lst
+                         if e[0] not in oldvers]
+                removed = sorted(oldvers - newvers)
+                if added or removed:
+                    entries.append(
+                        {"name": a["name"], "sector": sector,
+                         "source": src, "added": added, "removed": removed})
+
+    def newest(e):
+        return max((x.get("d") or "") for x in e["added"]) if e["added"] else ""
+
+    entries.sort(key=newest, reverse=True)
+    return entries[:CHANGES_CAP]
+
+
+def write_changes(db, old_db, data_dir=None):
+    """Write data/changes.json (Prompt 21). Returns the entry count."""
+    data_dir = data_dir or os.path.join(HERE, "data")
+    payload = {"generated": date.today().isoformat(),
+               "changes": compute_changes(db, old_db)}
+    os.makedirs(data_dir, exist_ok=True)
+    with open(os.path.join(data_dir, "changes.json"), "w",
+              encoding="utf-8") as fh:
+        json.dump(payload, fh, ensure_ascii=False)
+    return len(payload["changes"])
+
+
+def redirect_is_file(final_url, content_type, content_disp):
+    """Does a redirect chain land on a direct file? Signals: the final
+    URL names an .ipa/.tipa, the response is served as an attachment,
+    or its content type is a binary/file type. A chain landing on an
+    HTML page (or with no file signal at all) is NOT a direct file —
+    e.g. github.com -> release-assets.githubusercontent.com serves the
+    asset as application/octet-stream with a UUID path (no filename),
+    which is a legitimate file download, not a landing page."""
+    if re.search(r"\.(ipa|tipa)(\?|#|$)", final_url or "", re.I):
+        return True
+    if "attachment" in (content_disp or "").lower():
+        return True
+    ct = (content_type or "").lower()
+    if ct and not ct.startswith("text/") and "html" not in ct:
+        return True
+    return False
+
+
+def check_link_health(db, cap=2500, cache_path=None):
     """HEAD-check the newest build URL per (app, source); cache results.
 
     Cache: link_health.json {url: {"ok": bool, "ts": "YYYY-MM-DD"}}.
@@ -1151,13 +1585,7 @@ def check_link_health(db, cap=400, cache_path=None):
     """
     from concurrent.futures import ThreadPoolExecutor
     cache_path = cache_path or os.path.join(HERE, "link_health.json")
-    try:
-        with open(cache_path, encoding="utf-8") as fh:
-            cache = json.load(fh)
-        if not isinstance(cache, dict):
-            cache = {}
-    except Exception:
-        cache = {}
+    cache = load_link_health_cache(cache_path)
     today = date.today()
 
     def fresh(ts):
@@ -1189,17 +1617,32 @@ def check_link_health(db, cap=400, cache_path=None):
                 req = urllib.request.Request(u, method=method, headers=headers)
                 with urllib.request.urlopen(req, timeout=8) as r:
                     code = r.getcode()
-                    return (u, 200 <= code < 400)
+                    final = r.geturl()
+                    if final == u:
+                        return (u, 200 <= code < 400, "")
+                    is_file = redirect_is_file(
+                        final, r.headers.get_content_type(),
+                        r.headers.get("Content-Disposition"))
+                    return (u, 200 <= code < 400, final if is_file else "CHAIN")
             except Exception:
                 continue
-        return (u, False)
+        return (u, False, "")
 
     okc = badc = 0
     with ThreadPoolExecutor(max_workers=10) as ex:
-        for u, ok in ex.map(probe, todo):
-            cache[u] = {"ok": ok, "ts": today.isoformat()}
-            okc += ok
-            badc += (not ok)
+        for u, ok, final in ex.map(probe, todo):
+            entry = {"ok": ok, "ts": today.isoformat()}
+            if final == "CHAIN":
+                # Prompt 19: redirect chain that does NOT land on a
+                # direct file (see redirect_is_file) — never cataloged;
+                # excluded at bake time (exclude_redirect_chains).
+                entry["ok"] = False
+                entry["reason"] = "redirect-chain"
+            elif final:
+                entry["redir"] = final
+            cache[u] = entry
+            okc += entry["ok"]
+            badc += (not entry["ok"])
     try:
         with open(cache_path, "w", encoding="utf-8") as fh:
             json.dump(cache, fh)
@@ -1232,21 +1675,41 @@ def main():
         sys.exit("no sources fetched — aborting")
     print("seeding from previous build…", flush=True)
     seed, old_db = load_seed(os.path.join(HERE, "index.html"))
+    tools = load_tools_watch(offline)
+    print(f"  tools watch: {len(tools)} tool releases known", flush=True)
     print("assembling DB…", flush=True)
-    db, verified = build_db(fetched, seed, old_db)
+    db, verified = build_db(fetched, seed, old_db, tools=tools)
     print(f"  unique={db['unique']:,} total builds={db['total']:,} "
           f"verified={verified:,}", flush=True)
-    digest = render(db, verified, out)
-    write_rss(db)
+    for key, reasons in sorted(INGEST_STATS["dropped"].items()):
+        print(f"  url discipline [{key}]: dropped "
+              f"{sum(reasons.values())} builds {reasons}", flush=True)
+    # Dead-link health BEFORE render so the results bake into this build:
+    # probe fresh URLs (cap 2500) on live builds; offline/skipped runs
+    # bake whatever the cache already knows. Best-effort — never fatal.
+    lh_cache = load_link_health_cache()
     if not offline and not skip_link:
         try:
-            check_link_health(db)
+            lh_cache = check_link_health(db)
         except Exception as e:
             print(f"  ! link health check failed (non-fatal): {e}", flush=True)
     elif offline:
-        print("  link check skipped (offline)", flush=True)
+        print("  link check skipped (offline) — baking cached results",
+              flush=True)
     else:
-        print("  link check skipped (--skip-link-check)", flush=True)
+        print("  link check skipped (--skip-link-check) — baking cached "
+              "results", flush=True)
+    ndead = bake_dead_links(db, lh_cache)
+    print(f"  dead links baked: {ndead} urls", flush=True)
+    nchain, nchainapps = exclude_redirect_chains(db, lh_cache)
+    if nchain:
+        print(f"  redirect-chain builds excluded: {nchain} "
+              f"(apps dropped: {nchainapps})", flush=True)
+    digest = render(db, verified, out)
+    nch = write_changes(db, old_db)
+    print(f"  changes.json: {nch} per-source diffs vs previous build",
+          flush=True)
+    write_rss(db)
     print(f"DONE db_hash={digest}")
 
 

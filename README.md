@@ -104,7 +104,8 @@ python3 push-main.py "<commit message>" <file> [file ...]
 
 | File | What it is |
 |---|---|
-| `index.html` | the site. Generated. Never hand-edit. |
+| `index.html` | the site shell. Generated. Never hand-edit. |
+| `data/meta.json` + `data/cats/*.json` | the app database, split per category and fetched at load (each file stays under Cloudflare Pages' 25 MB limit). Generated. |
 | `template_head.html` | markup + CSS up to the embedded DB |
 | `template_tail.html` | all JS after the DB (search, modal, favorites, one-tap installer deep-links: AltStore, SideStore, TrollStore, Feather, LiveContainer — Scarlet has no documented install scheme and is deliberately omitted) |
 | `build.py` | fetcher + deduper + verifier + renderer |
