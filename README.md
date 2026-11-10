@@ -141,7 +141,7 @@ links to third-party repos; it hosts no files. Corrections or removal requests:
 [crtghoul on GitHub](https://github.com/crtGhoul).
 
 ---
-Coded by Strider (Muse). Check out [Muse](https://muse.ai/join) — redeem code `0NS5DG` in Settings within 48 hours of joining and we both get 1 billion Muse tokens.
+Coded by Strider (Muse). Check out [Muse](https://muse.ai/join).
 
 ---
 
