@@ -4,6 +4,8 @@ A searchable index of sideloadable iOS apps — zombie-terminal styling (intenti
 
 Live: [GitHub Pages](https://crtghoul.github.io/app-horde/) · [Cloudflare mirror](https://app-horde.pages.dev) — repo `crtGhoul/app-horde`.
 
+Current: **15,016 apps / 44,792 builds** (live).
+
 ## How the pipeline works
 
 `index.html` is **generated** — never hand-edit it. Edit a template, rebuild, sanity-check, push.
