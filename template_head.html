@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>/* theme before first paint: dark only when the user picked it (horde_theme), else light */
+try{if(localStorage.getItem('horde_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>APP_HORDE — iOS Sideloading App Index</title>
@@ -17,7 +19,7 @@
 <style>/* ================= APP_HORDE theme ================= */
 :root{
   --bg:#060806; --panel:#0a0d09; --card:#0b0e0a;
-  --text:#b9e8bd; --muted:#5f7a62;
+  --text:#b9e8bd; --muted:#9db8a1;
   --toxic:#39ff14; --blood:#ff1a3c; --amber:#ffb000; --cyan:#00e5ff;
   --border:#14301a; --dim:#0e150d;
 }
@@ -111,7 +113,7 @@ h2.sec::before{content:"// "}
 .tile:hover{border-color:var(--toxic);box-shadow:0 0 18px rgba(57,255,20,.28);transform:translateY(-3px)}
 .tile b{display:block;font-size:22px;color:var(--toxic);margin-bottom:6px}
 .tile span{color:var(--muted);font-size:12.5px;letter-spacing:1px}
-.tile span::before{content:"./";color:#3d5240}
+.tile span::before{content:"./";color:#8aa78e}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 
 /* ================= fresh drops ================= */
@@ -137,7 +139,7 @@ h2.sec::before{content:"// "}
 .toolbar input,.toolbar select{background:#000;border:1px solid var(--border);color:var(--toxic);
   padding:11px 14px;font-size:13.5px;font-family:inherit}
 .toolbar input{flex:1;min-width:200px}
-.toolbar input::placeholder{color:#33473a}
+.toolbar input::placeholder{color:#7d9a82}
 #myios{flex:0 1 118px;min-width:0}
 .card.oldios{opacity:.5}
 .src.s-noios{border-color:var(--blood);color:var(--blood)}
@@ -193,7 +195,7 @@ h2.sec::before{content:"// "}
 .chgrow .newtag{color:var(--amber);font-size:10px;letter-spacing:1px}
 .src{display:inline-block;border:1px solid;padding:3px 8px;font-size:10px;
   letter-spacing:1px;margin:2px 4px 2px 0}
-.src-hi{background:var(--c,var(--toxic));color:#000;border-color:var(--c,var(--toxic));font-weight:700}
+.src.src-hi{background:var(--c,var(--toxic));color:#000;border-color:var(--c,var(--toxic));font-weight:700}
 .s-alans{--c:var(--toxic);color:var(--c);border-color:var(--c)}
 .s-apt{--c:var(--cyan);color:var(--c);border-color:var(--c)}
 .s-fresh{color:#000;background:var(--toxic);border-color:var(--toxic);font-weight:700}
@@ -259,7 +261,7 @@ h2.sec::before{content:"// "}
 .shots img{height:132px;border-radius:8px;border:1px solid var(--border);flex:0 0 auto}
 
 /* ================= footer ================= */
-footer{color:#3d5240;font-size:11.5px;padding:34px 0;text-align:center;
+footer{color:#8aa78e;font-size:11.5px;padding:34px 0;text-align:center;
   border-top:1px solid var(--border);margin-top:36px;letter-spacing:1px;
   line-height:1.8;position:relative;z-index:2}
 footer .skull{color:var(--blood);font-size:15px}
@@ -387,47 +389,73 @@ footer .skull{color:var(--blood);font-size:15px}
   #rain { display: none; }
 }
 
-/* Nothing theme fix-pass (2026-11-06): remap toxic-bg elements for the light theme. */
-#rain{display:none !important;}
-.tab.active{background:#ffc700 !important;color:#040404 !important;border-color:#ffc700 !important;box-shadow:none !important;}
-.s-fresh{background:#ffc700 !important;color:#040404 !important;border-color:#ffc700 !important;}
-.ptag{background:#ffc700 !important;color:#040404 !important;}
-.cta{background:#ffc700 !important;color:#040404 !important;}
-.tabs .tab{color:#f4f4f4 !important;}
-.tabs .brand{color:#f4f4f4 !important;}
-.n{color:#040404 !important;}
-.ic{background:#ececec !important;}
-
-.nm{color:#040404 !important;}
-.pill{background:#ececec !important;color:#040404 !important;border-color:rgba(0,0,0,.12) !important;}
 </style>
 
-<style id="nothing-theme">
-:root{
+<style id="theme-light">
+/* LIGHT (default) — spiced Nothing: Lab Gray #f4f4f4, Dot Black serif
+   headlines, toxic-green #22c55e accent, monospace "> " section headers.
+   Every rule is scoped to html:not([data-theme="dark"]) so light is the
+   default even before JS runs; dark is the unscoped base theme above.
+   The toggle sets data-theme="dark" on <html> (persisted as horde_theme). */
+html:not([data-theme="dark"]){
   --bg:#f4f4f4; --panel:#ffffff; --card:#ffffff; --dim:#ececec;
   --text:#040404; --muted:#5c5c5c; --border:rgba(0,0,0,.12);
-  --toxic:#040404; --amber:#ffc700; --blood:#e02424; --cyan:#040404;
+  --toxic:#040404; --amber:#22c55e; --blood:#e02424; --cyan:#040404;
 }
-body{background:#f4f4f4 !important;}
-body::before, body::after{display:none !important;}
-h1, h2, h3{font-family:Georgia,'Times New Roman',serif !important;}
-.glitch, .glitch::before, .glitch::after{text-shadow:none !important;animation:none !important;}
-.gbtn{background:#040404 !important;color:#fff !important;border-color:#040404 !important;}
-.gbtn:hover{background:#222 !important;color:#fff !important;}
-.card{border-radius:8px !important;box-shadow:none !important;}
-</style>
-
-<style id="spiced-theme">
-/* SPICE (2026-11-04): same Nothing light base, but the accent is the horde's
-   own toxic green instead of the hub's Signal Yellow, and section headers
-   keep their terminal prompt voice. */
-:root{ --amber:#22c55e !important; }
-.tab.active{background:#22c55e !important;border-color:#22c55e !important;}
-.s-fresh{background:#22c55e !important;border-color:#22c55e !important;}
-.ptag{background:#22c55e !important;}
-.cta{background:#22c55e !important;}
-h2.sec{ font-family:ui-monospace,Menlo,Consolas,monospace !important; }
-h2.sec::before{ content:"> "; color:#16a34a; }
+html:not([data-theme="dark"]) body{background:#f4f4f4;}
+html:not([data-theme="dark"]) body::before, html:not([data-theme="dark"]) body::after{display:none;}
+html:not([data-theme="dark"]) h1, html:not([data-theme="dark"]) h2, html:not([data-theme="dark"]) h3{font-family:Georgia,'Times New Roman',serif;}
+html:not([data-theme="dark"]) .glitch, html:not([data-theme="dark"]) .glitch::before, html:not([data-theme="dark"]) .glitch::after{text-shadow:none;animation:none;}
+html:not([data-theme="dark"]) .gbtn{background:#040404;color:#fff;border-color:#040404;}
+html:not([data-theme="dark"]) .gbtn:hover{background:#222;color:#fff;}
+html:not([data-theme="dark"]) .card{border-radius:8px;box-shadow:none;}
+/* spiced accents (was #spiced-theme) */
+html:not([data-theme="dark"]) .tab.active{background:#22c55e;border-color:#22c55e;}
+html:not([data-theme="dark"]) .s-fresh{background:#22c55e;border-color:#22c55e;}
+html:not([data-theme="dark"]) .ptag{background:#22c55e;}
+html:not([data-theme="dark"]) .cta{background:#22c55e;}
+html:not([data-theme="dark"]) h2.sec{font-family:ui-monospace,Menlo,Consolas,monospace;}
+html:not([data-theme="dark"]) h2.sec::before{content:"> ";color:#16a34a;}
+/* fix-pass (was end of base block): elements that keep dark terminal chrome */
+html:not([data-theme="dark"]) #rain{display:none;}
+html:not([data-theme="dark"]) .tabs .tab{color:#f4f4f4;}
+html:not([data-theme="dark"]) .tab:hover{color:#22c55e;border-color:rgba(255,255,255,.25);}
+html:not([data-theme="dark"]) .tabs .brand{color:#f4f4f4;}
+html:not([data-theme="dark"]) .cursor{background:#f4f4f4;}
+html:not([data-theme="dark"]) .n{color:#040404;}
+html:not([data-theme="dark"]) .ic{background:#ececec;}
+html:not([data-theme="dark"]) .ecard .eic{background:#ececec;}
+html:not([data-theme="dark"]) .nm{color:#040404;}
+html:not([data-theme="dark"]) .pill{background:#ececec;color:#040404;border-color:rgba(0,0,0,.12);}
+/* light readability fixes (2026-11-13): dark-on-dark holes the Nothing
+   theme never covered — black text on black inputs/modal/menu, pale-pink
+   warning text on pale-pink, white-on-white chips. */
+html:not([data-theme="dark"]) .toolbar{background:rgba(244,244,244,.95);}
+html:not([data-theme="dark"]) .toolbar input, html:not([data-theme="dark"]) .toolbar select{background:#fff;color:#040404;border-color:rgba(0,0,0,.25);}
+html:not([data-theme="dark"]) .toolbar input::placeholder{color:#8a8a8a;}
+html:not([data-theme="dark"]) .toolbar input:focus, html:not([data-theme="dark"]) .toolbar select:focus{border-color:#22c55e;box-shadow:0 0 10px rgba(34,197,94,.35);}
+html:not([data-theme="dark"]) .vsrc select{background:#fff;color:#040404;border-color:rgba(0,0,0,.25);}
+html:not([data-theme="dark"]) .vsrc select:focus{border-color:#22c55e;}
+html:not([data-theme="dark"]) .mbox{background:#fff;border-color:#040404;box-shadow:0 0 40px rgba(0,0,0,.15);}
+html:not([data-theme="dark"]) .rmbox{background:#fff;border-color:#040404;}
+html:not([data-theme="dark"]) .bid code{background:#ececec;color:#040404;border-color:rgba(0,0,0,.12);}
+html:not([data-theme="dark"]) .quarantine{color:#6d1a24;}
+html:not([data-theme="dark"]) .warn{color:#6d1a24;}
+html:not([data-theme="dark"]) .badge.rank{background:#e8f5e9;color:#15803d;border-color:#22c55e;}
+html:not([data-theme="dark"]) .vtp.clean{background:#e8f5e9;color:#15803d;border-color:#22c55e;}
+html:not([data-theme="dark"]) .src-hi{background:#22c55e;border-color:#22c55e;color:#04140a;}
+html:not([data-theme="dark"]) .path:nth-child(2) .ptag{background:#38bdf8;color:#04140a;}
+html:not([data-theme="dark"]) .s-mtk{--c:#4b5563;}
+html:not([data-theme="dark"]) .s-ish{--c:#5b6b5e;}
+html:not([data-theme="dark"]) .s-side{--c:#16a34a;}
+html:not([data-theme="dark"]) footer{color:#5c5c5c;}
+html:not([data-theme="dark"]) #bootlog{color:#39ff14;}
+html:not([data-theme="dark"]) #bootbar{background:#39ff14;}
+html:not([data-theme="dark"]) #bootskip{color:#9db8a1;}
+html:not([data-theme="dark"]) #bootskip:hover{color:#39ff14;border-color:#39ff14;}
+html:not([data-theme="dark"]) ::-webkit-scrollbar-track{background:#ececec;}
+html:not([data-theme="dark"]) ::-webkit-scrollbar-thumb{background:#c8c8c8;border:2px solid #ececec;}
+html:not([data-theme="dark"]) ::-webkit-scrollbar-thumb:hover{background:#22c55e;}
 </style>
 </head>
 <body>
@@ -440,7 +468,7 @@ h2.sec::before{ content:"> "; color:#16a34a; }
 </div>
 
 <nav class="tabs"><div class="wrap">
-  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide" data-i18n="nav_guide">[guide]</button><button class="tab active" data-t="home" data-i18n="nav_home">[home]</button><button class="tab" data-t="faves" data-i18n="nav_faves">[faves]</button><button class="tab" data-t="top25" data-i18n="nav_top25">[top 25]</button><button class="tab" data-t="changes" data-i18n="nav_changes">[changes]</button><button class="tab" id="searchtab" data-i18n="nav_search">[search]</button><button class="tab" id="navrepobtn" data-i18n="nav_repos">[repos]</button><button class="tab" data-t="installer" data-i18n="nav_installer">[installer]</button><button class="tab" id="langtoggle" title="idioma / language">[ES]</button>
+  <span class="brand">☣ root@horde:~$<span class="cursor"></span></span><button class="tab" data-t="guide" data-i18n="nav_guide">[guide]</button><button class="tab active" data-t="home" data-i18n="nav_home">[home]</button><button class="tab" data-t="faves" data-i18n="nav_faves">[faves]</button><button class="tab" data-t="top25" data-i18n="nav_top25">[top 25]</button><button class="tab" data-t="changes" data-i18n="nav_changes">[changes]</button><button class="tab" id="searchtab" data-i18n="nav_search">[search]</button><button class="tab" id="navrepobtn" data-i18n="nav_repos">[repos]</button><button class="tab" data-t="installer" data-i18n="nav_installer">[installer]</button><button class="tab" id="langtoggle" title="idioma / language">[ES]</button><button class="tab" id="themetoggle" title="theme: light / dark">[☀ light]</button>
 </div></nav>
 
 <div class="wrap">

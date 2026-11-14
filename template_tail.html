@@ -1624,6 +1624,7 @@ document.getElementById('langtoggle').onclick = () => {
   LANG = LANG === 'en' ? 'es' : 'en';
   try { localStorage.setItem('horde_lang', LANG); } catch (e) { /* non-fatal */ }
   applyLangStatic();
+  paintThemeBtn();
   paintHomeGrids();
   paintFresh();
   paintCurated();
@@ -1637,6 +1638,29 @@ document.getElementById('langtoggle').onclick = () => {
     openModal(mc.name, mc.sector, false);
   }
 };
+// [☀ light]/[☾ dark] toggle: flip the theme, persist as horde_theme, update the button.
+// Light is the default (no data-theme attribute); dark sets data-theme="dark" on <html>.
+// The <head> inline script applies the stored theme before first paint.
+let THEME = 'light';
+try { THEME = localStorage.getItem('horde_theme') === 'dark' ? 'dark' : 'light'; } catch (e) {}
+function paintThemeBtn() {
+  const b = document.getElementById('themetoggle');
+  if (!b) return;
+  b.textContent = THEME === 'dark'
+    ? (LANG === 'es' ? '[☾ oscuro]' : '[☾ dark]')
+    : (LANG === 'es' ? '[☀ claro]' : '[☀ light]');
+}
+function applyTheme() {
+  if (THEME === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  else document.documentElement.removeAttribute('data-theme');
+  paintThemeBtn();
+}
+document.getElementById('themetoggle').onclick = () => {
+  THEME = THEME === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('horde_theme', THEME); } catch (e) { /* non-fatal */ }
+  applyTheme();
+};
+applyTheme();
 document.querySelectorAll('.tile').forEach(t =>
   t.onclick = () => setTab(t.dataset.t));
 document.querySelectorAll('.rtile').forEach(t =>
